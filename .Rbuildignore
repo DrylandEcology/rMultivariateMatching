@@ -1,6 +1,3 @@
-^01_Identify_matching_variables_and_criteria\.code$
-^02_Determine_number_of_subset_cells\.code$
-^03_Select_final_subset_cells\.code$
 ^04_Evaluating_matching_siteselection\.code$
 ^05_Interpolation_match_Subset_to_Target_cells\.code$
 ^06_Evaluating_matching_interpolation\.code$

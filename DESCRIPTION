@@ -24,7 +24,7 @@ Suggests:
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Imports: 
-    raster
+    raster,
     distances
 Depends: 
     R (>= 2.10)

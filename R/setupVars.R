@@ -10,14 +10,14 @@
 #' resolution, and crs.
 #'
 #' @return data frame with a 'cellnumbers' column, x and y coordinates, and values for each of the
-#' rasters in the RasterStack
+#' rasters in the RasterStack. The rownames correspond to the 'cellnumbers' column.
 #'
 #' @export
 #' @examples
 #' # Load bioclim data for Target Cells (from rMultivariateMatchingAlgorithms package)
 #' data(bioclim)
 #' # Create data frame of potential matching variables for Target Cells
-#' y <- makeInputdata(bioclim)
+#' allvars <- makeInputdata(bioclim)
 
 # Function to format rasters of potential matching variables for Target Cells
 makeInputdata <- function(x){
@@ -38,78 +38,72 @@ makeInputdata <- function(x){
 
 
 
-#' Select matching variables
+#' Determine matching criteria
 #'
-#' Create a new factor from two existing factors, where the new factor's levels
-#' are the union of the levels of the input factors.
+#' Examine summary statistics of matching variables to determine matching criteria
 #'
-#' @param x data frame created using \code{\link{makeInputdata}} or formatted similarly.
-
+#' @param matchingvars data frame created using \code{\link{makeInputdata}} or
+#' formatted such that: rownames are 'cellnumbers' extracted using the
+#' \code{\link{raster::extract}} function, columns 2 and 3 correspond to x and y
+#' coordinates, and additional columns correspond to potential matching variables
+#' extracted using the \code{\link{raster::rasterToPoints}} function.
 #'
-#' @return factor
+#' @param criteria_list list of matching criteria to test in the \code{\link{kpoints}}
+#' function.
+#'
+#' @param k number of points to use to find solution using \code{\link{kpoints}}
+#' function. Default value is 200.
+#'
+#' @param areas one of the raster layers used for input data.
+#' See \code{\link{raster::area}}.
+#'
+#' @param ... accepts additional parameters to \code{\link{kpoints}} function.
+#'
+#' @return
 #' @export
 #' @examples
 #' # Load bioclim data for Target Cells (from rMultivariateMatchingAlgorithms package)
 #' data(bioclim)
 #' # Create data frame of potential matching variables for Target Cells
-#' y <- makeInputdata(bioclim)
+#' allvars <- makeInputdata(bioclim)
+#' # Restrict data to matching variables of interest
+#' matchingvars <- allvars[,c("cellnumbers","x","y","bioclim_01","bioclim_04","bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+#' # Create list of matching criteria to choose:
+#' # Look at 2.5%, 5%, & 10% of range and standard deviation for each variable
+#' range2.5pct <- apply(matchingvars[,4:ncol(matchingvars)],2,function(x){(max(x)-min(x))*0.025})
+#' range5pct <- apply(matchingvars[,4:ncol(matchingvars)],2,function(x){(max(x)-min(x))*0.05})
+#' range10pct <- apply(matchingvars[,4:ncol(matchingvars)],2,function(x){(max(x)-min(x))*0.1})
+#' stddev <- apply(matchingvars[,4:ncol(matchingvars)],2,sd)
+#' criteria_list <- list(range2.5pct, range5pct)#, range10pct, stddev)
 
-data(bioclim)
-# Create data frame of potential matching variables for Target Cells
-x <- bioclim[[1]]
+# Compare coverage with various criteria
+#' results2 <- choose_criteria(matchingvars, criteria_list, k = 200, areas = bioclim[[1]])
 
-areas <- area(wydrylands) # Gives approx. area in km2
-rm(wydrylands)
-
-# Read in bioclim and soils data
-bioclim <- readRDS(paste0(datafolder,"/TargetCells_Bioclim+soils_WY.csv"))
-# Note: cellnumbers in this dataframe correspond to the unique cellnumbers associated with each
-# target cell. These serve as unique identifiers throughout the code and can
-# be extracted from the raster datasets that define the target cells using the
-# extract function in the raster package with "cellnumbers" = TRUE
-
-# Find total area of study area by extracting areas using cellnumbers
-totalarea <- round(sum(extract(areas, as.numeric(row.names(bioclim)))))
-# 246771 km2
-
-# limit to just the 8 variables of interest
-# Selected to capture the major drivers of plant community structure an ecohydrology in drylands (from Renne et al. 2021):
-# "bioclim_01" = mean annual temperature
-# "bioclim_04" = temperature seasonality
-# "bioclim_09" = mean temperature of the driest quarter
-# "bioclim_12" = mean annual precipitation
-# "bioclim_15" = precipitation seasonality
-# "bioclim_18" = precipitation of the warmest quarter
-# "clay" = depth-weighted percentage clay
-# "sand" = depth-weighted percentage sand
-bioclim1a <- data.frame(bioclim[,c(2,3,4,7,12,15,18,21,23,24)])
-
-#################################################################
-# Step 2: Examine matching variables to help determine matching critera:
-summary(bioclim1a)
-
-# Look at 5th and 95th percentiles
-apply(bioclim1a[,3:10], 2, FUN = function(x){quantile(x, probs = c(0.05,.95), na.rm = T)})
-
-# Find range of each
-apply(bioclim1a[,3:10],2,function(x){(max(x)-min(x))})
-
-# Compare 5% of range to 10% of range for each variable
-apply(bioclim1a[,3:10],2,function(x){(max(x)-min(x))*0.05})
-apply(bioclim1a[,3:10],2,function(x){(max(x)-min(x))*0.1})
+choose_criteria <- function(matchingvars,criteria_list,k = 200,areas,...){
+  criteria_results <- list()
+  for (cr in 1:length(criteria_list)){
+    print(paste0("Using criteria: ", criteria_list[cr]))
+    criteria = criteria_list[[cr]]
+    klist = k
+    results1 <- kpoints(matchingvars,criteria,klist,areas=areas,n_starts = n_starts)
+    criteria_results$solution_areas[cr] <- results1$solution_areas
+    criteria_results$totalarea = results1$totalarea
+    criteria_results$k = results1$k
+    criteria_results$iter = results1$iter
+    criteria_results$n_starts = results1$n_starts
+    criteria_results$criteria_list = results1$criteria_list
+    criteria_results$mindelta.area = results1$mindelta.area
+  }
+  par(tcl = 0.3, mgp = c(1.5,0.2,0), mar = c(3,3,1,1))
+  barplot(criteria_results$solution_areas/criteria_results$totalarea,
+          main = "Area covered for different criteria",
+          xlab = "Criteria (refer to criteria_list)",
+          ylab = "Proportion of area covered",
+          cex.lab = 1.2, cex.axis = 1.2,
+          ylim = c(0,1), names.arg = c(1:length(criteria_list)))
+  box()
+  return(criteria_results)
+}
 
 
 
-#' Determine matching criteria
-#'
-#' Create a new factor from two existing factors, where the new factor's levels
-#' are the union of the levels of the input factors.
-#'
-#' @param a factor
-#' @param y any raster layer of the study area, with extent, resolution, and crs matching
-#' rasters used to create x.
-#'
-#' @return factor
-#' @export
-#' @examples
-#' fbind(iris$Species[c(1, 51, 101)], PlantGrowth$group[c(1, 11, 21)])
