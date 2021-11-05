@@ -1,21 +1,33 @@
-##########################################
-#
-# Purpose: Evaluate matching for interpolation case study
-#
-# Summary: Use leave-one-out cross validation to estimate matching errors
-#
-# Inputs: "SubsetCells_bioclim+soils+results_WY_interpolation.csv"
-#
-# Outputs: "SD_Diffs_LOOCV_interpolation.png"
-#          "Hist_Estimated_Errors_LOOCV_interpolation.png"
-#
-# Rachel Renne
-# April 4, 2021
-#
-##########################################
+#' Plot a raster with a custom legend below
+#'
+#' Plots a raster with binned colors and adds a legend below the image.
+#'
+#'
+#' @param x raster. A raster to be plotted.
+#'
+#' @param thisVariable character. The name of the variable in the raster. Defaults
+#' to the name of the raster.
+#'
+#' @param round_dec numeric. The number of decimal places to round the labels
+#' of the legend. Defaults to 0.
+#'
+#' @param cols vector of colors to use in the legend. Default colors range from
+#' yellow to dark brown through 8 distinct colors.
+#'
+#' @param bks vector of breaks to use in designating which values get assigned to
+#' each color in `cols`. Must have one more element than `cols`. Unless `bks` are
+#' designated, this vector will be calculated internally from `cols`.
+#'
+#' @return a plot of the raster with a legend.
+#'
+#'
+#' @examples
+#' # Load bioclim data for Target Cells (from rMultivariateMatchingAlgorithms package)
+#' data(bioclim)
+#' legendPlot(bioclim[[1]])
+#'
 
-library(raster)
-library(distances)
+loocv <- function(matches){
 
 #####################################################################################
 # Step 1: Calculate matching quality (weighted Euclidean distance between target and matched subset cells)
@@ -37,11 +49,11 @@ bioclimx <- subset[,c(3,4,7:27)]
 bioclim1 <- bioclimx[seq(1,nrow(bioclimx), by = 5),]
 
 # Transform
-bioclim2 <- cbind(bioclim1[,1:2],bioclim1$bioclim_01/0.7, 
-                  bioclim1$bioclim_04/42, 
+bioclim2 <- cbind(bioclim1[,1:2],bioclim1$bioclim_01/0.7,
+                  bioclim1$bioclim_04/42,
                   bioclim1$bioclim_09/3.3,
                   bioclim1$bioclim_12/66,
-                  bioclim1$bioclim_15/5.4, 
+                  bioclim1$bioclim_15/5.4,
                   bioclim1$bioclim_18/18.4,
                   bioclim1$sand/0.053,
                   bioclim1$clay/0.038)
@@ -211,3 +223,4 @@ for (i in 1:6){
   mtext(titles[[i]], side = 3, line = 0, adj = 0, cex = 1.2)
 }
 #dev.off()
+}

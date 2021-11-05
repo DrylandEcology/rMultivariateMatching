@@ -1,6 +1,7 @@
 #' Set up input data for Target cells
 #'
-#' Prepare data frame of potential matching variables for Target cells from raster files
+#' Prepare data frame of potential matching variables for Target cells from
+#' raster files
 #'
 #'
 #' @param x RasterStack that covers the area of interest and includes all potential matching variables.
@@ -9,10 +10,13 @@
 #' and combine the output into one final data frame. Note: rasters must all have the same extent,
 #' resolution, and crs.
 #'
-#' @return data frame with a 'cellnumbers' column, x and y coordinates, and values for each of the
-#' rasters in the RasterStack. The rownames correspond to the 'cellnumbers' column.
+#' @return data frame with a 'cellnumbers' column (these are unique values for each
+#' cell in the rasters used as input and will be used as unique identifiers for
+#' the Target cells in other functions), x and y coordinates, and values for each
+#' of the rasters in the RasterStack. The rownames correspond to the 'cellnumbers'
+#' column.
 #'
-#' @export
+#'
 #' @examples
 #' # Load bioclim data for Target Cells (from rMultivariateMatchingAlgorithms package)
 #' data(bioclim)
@@ -21,6 +25,9 @@
 
 # Function to format rasters of potential matching variables for Target Cells
 makeInputdata <- function(x){
+  if (sum(grep("raster", class(x), ignore.case = TRUE)) < 1){
+    stop("Incorrect inputs, x must be a raster.")
+  }
   # Convert rasters to points
   x1 <- raster::rasterToPoints(x)
   # Get cellnumbers:
@@ -49,18 +56,23 @@ makeInputdata <- function(x){
 #' extracted using the \code{\link{raster::rasterToPoints}} function.
 #'
 #' @param criteria_list list of matching criteria to test in the \code{\link{kpoints}}
-#' function.
+#' function. Each item in the list should be a vector of values (possible matching
+#' criteria) corresponding to each matching variable.
 #'
 #' @param k number of points to use to find solution using \code{\link{kpoints}}
 #' function. Default value is 200.
 #'
-#' @param areas one of the raster layers used for input data.
-#' See \code{\link{raster::area}}.
+#' @param raster_template one of the raster layers used for input data.
+#' See \code{\link{raster::area}}. Note that 'cellnumbers' column must be
+#' present for \code{\link{kpoints}} function to work within this function.
+#'
+#' @param plot_coverage boolean. Indicates whether the algorithm should display
+#' a barplot of the coverage for each set of criteria. Default is TRUE.
 #'
 #' @param ... accepts additional parameters to \code{\link{kpoints}} function.
 #'
 #' @return
-#' @export
+#'
 #' @examples
 #' # Load bioclim data for Target Cells (from rMultivariateMatchingAlgorithms package)
 #' data(bioclim)
@@ -74,25 +86,28 @@ makeInputdata <- function(x){
 #' range5pct <- apply(matchingvars[,4:ncol(matchingvars)],2,function(x){(max(x)-min(x))*0.05})
 #' range10pct <- apply(matchingvars[,4:ncol(matchingvars)],2,function(x){(max(x)-min(x))*0.1})
 #' stddev <- apply(matchingvars[,4:ncol(matchingvars)],2,sd)
-#' criteria_list <- list(range2.5pct, range5pct)#, range10pct, stddev)
+#' criteria_list <- list(range2.5pct, range5pct, range10pct, stddev)
 
 # Compare coverage with various criteria
-#' results2 <- choose_criteria(matchingvars, criteria_list, k = 200, areas = bioclim[[1]])
+#' results2 <- choose_criteria(matchingvars, criteria_list = criteria_list, n_starts = 1, k = 200, raster_template = bioclim[[1]], plot_coverage = TRUE)
 
-choose_criteria <- function(matchingvars,criteria_list,k = 200,areas,...){
+choose_criteria <- function(criteria_list = NULL,k = 200,plot_coverage = TRUE,...){
+  if (class(criteria_list) != "list" | is.null(criteria_list)){
+    stop("Verify inputs: 'criteria_list' is not a list or is missing.")
+  }
   criteria_results <- list()
   for (cr in 1:length(criteria_list)){
     print(paste0("Using criteria: ", criteria_list[cr]))
     criteria = criteria_list[[cr]]
     klist = k
-    results1 <- kpoints(matchingvars,criteria,klist,areas=areas,n_starts = n_starts)
+    results1 <- kpoints(matchingvars,criteria,klist=klist,...)
     criteria_results$solution_areas[cr] <- results1$solution_areas
     criteria_results$totalarea = results1$totalarea
     criteria_results$k = results1$k
     criteria_results$iter = results1$iter
     criteria_results$n_starts = results1$n_starts
     criteria_results$criteria_list = results1$criteria_list
-    criteria_results$mindelta.area = results1$mindelta.area
+    criteria_results$min_area = results1$min_area
   }
   par(tcl = 0.3, mgp = c(1.5,0.2,0), mar = c(3,3,1,1))
   barplot(criteria_results$solution_areas/criteria_results$totalarea,
