@@ -1,226 +1,130 @@
-#' Plot a raster with a custom legend below
+#' Estimate matching error
 #'
-#' Plots a raster with binned colors and adds a legend below the image.
+#' Use leave-one-out cross-validation of simulated sites to evaluate matching
+#' errors
 #'
 #'
-#' @param x raster. A raster to be plotted.
+#' @param
 #'
-#' @param thisVariable character. The name of the variable in the raster. Defaults
-#' to the name of the raster.
+#' @param
 #'
-#' @param round_dec numeric. The number of decimal places to round the labels
-#' of the legend. Defaults to 0.
+#' @param
 #'
-#' @param cols vector of colors to use in the legend. Default colors range from
-#' yellow to dark brown through 8 distinct colors.
+#' @param
 #'
-#' @param bks vector of breaks to use in designating which values get assigned to
-#' each color in `cols`. Must have one more element than `cols`. Unless `bks` are
-#' designated, this vector will be calculated internally from `cols`.
+#' @param
 #'
-#' @return a plot of the raster with a legend.
+#' @return
 #'
 #'
 #' @examples
-#' # Load bioclim data for Target Cells (from rMultivariateMatchingAlgorithms package)
-#' data(bioclim)
-#' legendPlot(bioclim[[1]])
+#' # Get subsetcells
+#' data(subsetcells)
+#' # Pull out only matching variables and remove duplicates
+#' matchingvars <- subsetcells[,c("site_id","X_WGS84","Y_WGS84","bioclim_01","bioclim_04",
+#'                                "bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
 #'
-
-loocv <- function(matches){
-
-#####################################################################################
-# Step 1: Calculate matching quality (weighted Euclidean distance between target and matched subset cells)
-
-# Folder where input and output data are stored
-datafolder <- getwd()
-
-# Folder to store figures
-figurefolder <- getwd()
-
-# Read in bioclim and soils data for subset cells
-subset <- read.csv(paste0(datafolder,"/SubsetCells_bioclim+soils+results_WY_interpolation.csv"), row.names = 1)
-row.names(subset) <- paste0("00", row.names(subset))
-
-#pull out bioclim+soils data:
-bioclimx <- subset[,c(3,4,7:27)]
-
-# Pull out just sites with site-specific soils (every 5th site)
-bioclim1 <- bioclimx[seq(1,nrow(bioclimx), by = 5),]
-
-# Transform
-bioclim2 <- cbind(bioclim1[,1:2],bioclim1$bioclim_01/0.7,
-                  bioclim1$bioclim_04/42,
-                  bioclim1$bioclim_09/3.3,
-                  bioclim1$bioclim_12/66,
-                  bioclim1$bioclim_15/5.4,
-                  bioclim1$bioclim_18/18.4,
-                  bioclim1$sand/0.053,
-                  bioclim1$clay/0.038)
-colnames(bioclim2) <- c("x","y","MAT","MAP","ppt.seas","temp.seas","tdryq","pwarmq","sand","clay")
-
-# Calculate distance matrix for all cells:
-xdist <- distances(bioclim2[,3:8], id_variable = row.names(bioclim2))
-cell_numbers <- rownames(bioclim2)
-
-# Find 2 nearest neighbors (first will be self) using Euclidean distance of weighted climate variables
-neighbors <- nearest_neighbor_search(xdist, k = 2, search_indices = 1:2126,
-                                     query_indices = 1:2126)
-neighbors1 <- cell_numbers[t(neighbors[2,])]
-
-####################
-# Step 3: Find best match among available soils for each climatic match
-
-# Calculate the distance between site-specific soils and each matched cell:
-# Get matched values:
-site_vars1a <- bioclim1[t(neighbors[2,]),]
-
-# Calculate distance between site specific soils and matched cells
-site_dist <- sqrt((site_vars1a[,22]/0.053-bioclim1[,22]/0.053)^2+(site_vars1a[,23]/0.038-bioclim1[,23]/0.038)^2)
-# Set names to the Subset cell name that corresponds to site-specific soils
-names(site_dist) <- neighbors1
+#' # Fix names
+#' names(matchingvars) <- c("cellnumbers","x","y",names(matchingvars)[4:9])
+#' # Remove duplicates (we will first match on climate only)
+#' matchingvars <- matchingvars[!duplicated(matchingvars$cellnumbers),]
+#' rownames(matchingvars) <- matchingvars$cellnumbers
+#' # Remove cellnumbers column
+#' matchingvars <- matchingvars[,-1]
+#'
+#' # Pull out secondary vars and keep both identifiers
+#' secondaryvars <- subsetcells[,c("site_id","X_WGS84","Y_WGS84","sand","clay")]
+#' # Fix names
+#' names(secondaryvars) <- c("cellnumbers","x","y",names(secondaryvars)[4:5])
+#' # Convert sand and clay to percentage from fraction
+#' secondaryvars$sand <- secondaryvars$sand*100
+#' secondaryvars$clay <- secondaryvars$clay*100
+#' # Remove duplicates
+#' secondaryvars <- secondaryvars[!duplicated(secondaryvars$cellnumbers),]
+#' rownames(secondaryvars) <- secondaryvars$cellnumbers
+#'
+#' # Bring in "other" treatments
+#' data(setsoiltypes)
+#' other_treatments = setsoiltypes
+#'
+#' # Set original criteria
+#' criteria1 = c(0.7,42,3.3,66,5.4,18.4)
+#' # Calculate criteria for secondary matching
+#' criteria2 = c((max(subsetcells$sand,na.rm = T)-min(subsetcells$sand,na.rm = T))/10*100,
+#'              (max(subsetcells$clay,na.rm = T)-min(subsetcells$clay,na.rm = T))/10*100)
+#'
+#' # Bring in simulation output results of interest
+#' output_results = subsetcells[,c("site_ids","Dryprop","CwetWinter","CdrySummer",
+#'                                 "Cwet8","Dryall","Dryany")]
+#' rownames(output_results) <- output_results$site_ids
 
 
-# Create dataframe of set soil type
-sand <- c(0.3, 0.27, 0.66, 0.16)
-clay <- c(0.18, 0.35, 0.09, 0.09)
-soils <- cbind(sand, clay)
-rownames(soils) <- c("2","3","4","5")
+loocv <- function(matchingvars, secondaryvars, ouput_results = NULL,
+                  criteria1 = 1, criteria2 = 1, secondarymatch = TRUE,
+                  secondaryvars_id = "cellnumbers", reference_treatment = "1",
+                   n_neighbors = 2,
+                  other_treatments = NULL,
+                  raster_template = NULL,subset_in_target = FALSE,
+                  saveraster=FALSE,plotraster=FALSE, ...){
 
-# Combine matched cells soils and allcells soils:
-allsoils <- rbind(soils,bioclim1[,22:23])
+  # Standardize variables of interest
+  stdvars <- matchingvars[,c("x","y")]
+  for (i in which(colnames(matchingvars) != c("x","y"))){
+  stdvars <- cbind(stdvars, matchingvars[,i]/criteria1[i-2])
+  }
 
-# Transform soils:
-allsoils1 <- cbind(allsoils[,1]/0.053, allsoils[,2]/0.038)
-rownames(allsoils1) <- c("2","3","4","5",row.names(bioclim1))
+  # fix colnames
+  colnames(stdvars) <- c("x","y",colnames(matchingvars)[3:ncol(matchingvars)])
 
-# Calculate distances between set soil types and matched cells:
-xdist1 <- distances(allsoils1, id_variable = row.names(allsoils1))
-cell_numbers <- rownames(allsoils1)
-neighbors_soils <- nearest_neighbor_search(xdist1, k = 1, search_indices = c(1:4),
-                                           query_indices = c(5:nrow(allsoils1)))
+  # Calculate distance matrix for all cells:
+  xdist <- distances::distances(stdvars[,3:ncol(stdvars)], id_variable = row.names(stdvars))
+  cell_numbers <- rownames(stdvars)
 
-# Create dataframe with matched simiulated site variables corresponding to each cell
-site_vars2a <- allsoils1[neighbors_soils,]
+  # Find nearest 2 neighbor (1st will be self, second will be nearest non-self cell)
+  neighbors <- distances::nearest_neighbor_search(xdist, k = n_neighbors, search_indices = c(1:nrow(matchingvars)))
 
-# Calculate distance between site specific soils and matched cells
-setsoil_dist <- sqrt((site_vars2a[,1]-bioclim1[,22]/0.053)^2+(site_vars2a[,2]-bioclim1[,23]/0.038)^2)
+  # Create vector of cellnumbers of subset cells matched to each target cell
+  neighbors2 <- cell_numbers[as.numeric(t(neighbors[nrow(neighbors),]))]
 
-# Determine min.dist between site_specific distance and min dist to set soil types:
-min_dist <- apply(cbind(site_dist, setsoil_dist), 1, FUN = which.min)
+  # Bind to transformed data
+  stdvars2 <- cbind(stdvars,as.numeric(t(neighbors[nrow(neighbors),])))
 
-# Create vector of rownames from setsoil_dist that reflects unique ids:
-setsoil_names <- paste0("00",as.integer(as.numeric(names(site_dist))), ".",names(setsoil_dist))
-names_matrix <- cbind(names(site_dist), setsoil_names)
-names_selection_matrix <- cbind(1:length(min_dist), min_dist)
-matches <- names_matrix[names_selection_matrix]
+  # Use neighbors2 column in stdvars2 to calculate weighted squared Euclidean
+  # distance between target and matched subset cells
+  d1 <- (stdvars2[stdvars2[,ncol(stdvars2)],3]-stdvars2[,3])^2
+  for (cv in 2:(ncol(stdvars2)-3)){
+  d1<- cbind(d1,(stdvars2[stdvars2[,ncol(stdvars2)],2+cv]-stdvars2[,2+cv])^2)
+  }
+  sum6 <- apply(d1,1, sum)
 
-# Create a matches column for target cells
-bioclimx1 <- data.frame(cbind(bioclim1,matches))
+  # Final weighted Euclidean distance between each Target cell and its matched
+  # Subset cell (i.e. matching quality variable):
+  qual1 <- data.frame(x = stdvars2[,"x"], y = stdvars2[,"y"],
+                    target_cell = rownames(stdvars2),
+                    subset_cell = neighbors2, matching_quality = sqrt(sum6))
+  rownames(qual1) <- rownames(stdvars)
 
-# Add matches on for set soils:
-clim_match <- as.integer(as.numeric(matches))
-
-# Pull out each soil type:
-bioclimx2 <- bioclimx[seq(2,nrow(bioclimx), by = 5),]
-bioclimx2$matches <- paste0("00", clim_match,".2")
-
-bioclimx3 <- bioclimx[seq(3,nrow(bioclimx), by = 5),]
-bioclimx3$matches <- paste0("00", clim_match,".3")
-
-bioclimx4 <- bioclimx[seq(4,nrow(bioclimx), by = 5),]
-bioclimx4$matches <- paste0("00", clim_match,".4")
-
-bioclimx5 <- bioclimx[seq(5,nrow(bioclimx), by = 5),]
-bioclimx5$matches <- paste0("00", clim_match,".5")
-
-# Put all bioclim+soils data together with matches:
-alldata <- rbind(bioclimx1, bioclimx2, bioclimx3, bioclimx4, bioclimx5)
-
-##########################################
-# Step 4: Calculate standard deviation of diffs for clim/soil variables
-
-# Read in list of variable names
-bioclim_vars <- c("Annual Mean Temperature",
-                  "Mean Diurnal Range",
-                  "Isothermality (BIO2/BIO7)",
-                  "Temperature Seasonality (SD*100)",
-                  "Max Temp of Warmest Month",
-                  "Min Temp of Coldest Month",
-                  "Temp Annual Range",
-                  "Mean Temp of Wettest Quarter",
-                  "Mean Temp of Driest Quarter",
-                  "Mean Temp of Warmest Quarter",
-                  "Mean Temp of Coldest Quarter",
-                  "Annual Precipitation",
-                  "Precip of Wettest Month",
-                  "Precip of Driest Month",
-                  "Precip Seasonality (Coef of Var)",
-                  "Precip of Wettest Quarter",
-                  "Precip of Driest Quarter",
-                  "Precip of Warmest Quarter",
-                  "Precip of Coldest Quarter",
-                  "Sand fraction","Clay fraction")
-
-# Results df for sd of differences:
-results_sd <- data.frame(variable = bioclim_vars, six_vars = NA)
-
-# Record sd and max diffs in results
-for (i in 3:23){
-  results_sd[i-2,2] <- sd(alldata[alldata$matches,i]-alldata[,i])
-}
-
-# Convert soils to percentage so it displays better among other variables
-results_sd1 <- results_sd
-results_sd1[20:21,2] <- c(results_sd[20:21,2]*100 )
-
-# Visualize differences
-# Visualize results:
-#png(paste0(figurefolder,"/SD_Diffs_LOOCV_interpolation.png"), width = 5, height = 7, units = "in", res = 300)
-par(mfrow = c(1,1))
-par(mar = c(3,10,3,1), mgp = c(3,0.3,0), tcl = 0.3, lwd =1)
-barplot(rev(c(t(results_sd1[,2]))), beside = T, horiz = T,
-        names.arg = rev(c(bioclim_vars[1:19],"Sand (%)","Clay (%)")), las = 1, cex.names = 0.7,
-        main = "Standard deviation of differences", xlim = c(0,13))
-box()
-#dev.off()
-
-##########################################
-# Step 5: Estimate matching errors
-
-# Pull results in from subset dataframe & reorder to match alldata
-results1 <- subset[,28:33]
-results <- results1[row.names(alldata),]
-# add on matches
-results$matches <- alldata$matches
+  if (secondarymatch){
+  # Run secondary matching on soils data
+  quals2 <- secondaryMatching(secondaryvars = secondaryvars, matches = qual1,
+                              subsetcells = secondaryvars,
+                              subsetcells_id = secondaryvars_id,
+                              subset_in_target = FALSE, criteria = criteria2,
+                              reference_treatment = "1",
+                              raster_template = raster_template,
+                              other_treatments = other_treatments,
+                              is_loocv = TRUE, ...)
 
 
-################################################################################
+  } else if (!secondarymatch){
+    quals2 <- qual1
+  }
 
-titles <- list(parse(text = paste0('"A)" ', ' ~ DRY[PROP]')), parse(text = paste0('"B)" ', ' ~ CWET[WINTER]')),
-               parse(text = paste0('"C)" ', ' ~ CDRY[SUMMER]')), parse(text = paste0('"D)" ', ' ~ CWET[8]')),
-               parse(text = paste0('"E)" ', ' ~ DRY[ALL]')), parse(text = paste0('"F)" ', ' ~ DRY[ANY]')))
-rd <- c(2,0,0,0,0,0)
-rd2 <- c(3,0,0,0,0,0)
-rd3 <- c(3,1,1,1,1,1)
-
-#png(paste0(figurefolder,"/Hist_Estimated_Errors_LOOCV_interpolation.png"), width = 9, height = 6, units = "in", res = 300)
-
-par(mar = c(3,3,2,1), mfrow = c(2,3), mgp = c(1.7,0.3,0), tcl = 0.1)
-
-for (i in 1:6){
-  thisvar = round(sum((-results[results$matches,i]+results[,i])^2)/nrow(results),rd2[i])
-  thismin = round(min(-results[results$matches,i]+results[,i]),rd[i])
-  thismax = round(max(-results[results$matches,i]+results[,i]),rd[i])
-  hist(-results[results$matches,i]+results[,i], breaks = 100,
-       main = "",
-       xlab = "Simulated - Matched value", cex.lab = 1.3, cex.axis = 1.2, ylim = c(0,1550))
-  legend("topright", legend = c(paste0("min = ", thismin), paste0("max = ", thismax),
-                                paste0("mean = ", round(mean(-results[results$matches,i]+results[,i],na.rm = T),rd3[i])),
-                                parse(text = paste0('', ' ~ CV[error] == ', thisvar))), bty = "n", cex = 1.2)
-  box()
-  abline(h = 0)
-  mtext(titles[[i]], side = 3, line = 0, adj = 0, cex = 1.2)
-}
-#dev.off()
+  # Now calculate matching errors and add onto matching quality
+  for (i in 2:ncol(output_results)){
+    quals2[,ncol(quals2)+1] <- output_results[quals2$target_cell, i] - output_results[quals2$subset_cell_secondary,i]
+  }
+  # Fix names
+  names(quals2)[8:ncol(quals2)] <- paste0(names(output_results)[2:ncol(output_results)],"_diff")
+  return(quals2)
 }

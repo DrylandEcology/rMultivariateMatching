@@ -1,6 +1,6 @@
-Package: rMultivariateMatchingAlgorithms
-Title: Use multivariate matching to interpolate mulidimensional datasets
-Version: 0.0.0.9000
+Package: rMultivariateMatching
+Title: Multivariate matching for interpolation of mulidimensional datasets
+Version: 1.0
 Authors@R: 
     person(given = "Rachel",
            family = "Renne",
@@ -21,6 +21,8 @@ LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.1
 Suggests: 
+    knitr,
+    rmarkdown,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Imports: 
@@ -28,3 +30,4 @@ Imports:
     distances
 Depends: 
     R (>= 2.10)
+VignetteBuilder: knitr

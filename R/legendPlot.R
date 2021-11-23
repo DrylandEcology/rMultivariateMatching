@@ -22,12 +22,12 @@
 #'
 #'
 #' @examples
-#' # Load bioclim data for Target Cells (from rMultivariateMatchingAlgorithms package)
-#' data(bioclim)
-#' legendPlot(bioclim[[1]])
+#' # Load targetcells data for Target Cells
+#' data(targetcells)
+#' legendPlot(targetcells[[1]])
 
 legendPlot <- function(x = NULL, thisVariable = names(x)[1], round_dec = 0,
-                       cols = NULL, bks = NULL){
+                       cols = NULL, bks = NULL, addpoints = NULL, matchingQ = FALSE){
   if (is.null(x)){
     stop("Verify inputs: 'x' is missing.")
   }
@@ -40,9 +40,11 @@ legendPlot <- function(x = NULL, thisVariable = names(x)[1], round_dec = 0,
   bks <- calculateBreaks(x, n_cols = n_cols)
   }
   # Set up axis label locations
+  if (!matchingQ){
   axisat <- 0.75
   for (ii in 2:(length(bks))){
     axisat <- c(axisat, (axisat[ii-1]+9.5/length(cols)))
+  }
   }
 
   # Setup layout
@@ -56,23 +58,31 @@ legendPlot <- function(x = NULL, thisVariable = names(x)[1], round_dec = 0,
                 breaks = bks,
                 xlab = "", ylab ="",
                 bty = "n", xaxt = "n",yaxt="n")
-  if (addpoints){
-    points(subsetcells$y ~ subsetcells$x, pch = 16, cex = 1, col = "black")
+  if (!is.null(addpoints)){
+    if (addpoints){
+    points(subsetcells[,"y"] ~ subsetcells[,"x"], pch = 16, cex = 1, col = "black")
+    }
   }
   box()
   par(mar=c(0,0.5,0.2,0.5))
   plot(1:10~1, col = "white", xaxt = "n", yaxt = "n", bty = "n")
-  for (xx in 1:length(truecols)){
+  mtext(thisVariable, side = 1, line = -1.01, cex = 1)
+  if (!matchingQ){
+  for (xx in 1:length(cols)){
     polygon(x = c(axisat[xx],axisat[xx],axisat[xx+1],axisat[xx+1]),
             y = c(7,10,10,7),border = cols[xx], col = cols[xx])
   }
-  mtext(thisVariable, side = 1, line = -1.01, cex = 1)
   polygon(x = c(axisat[9],axisat[1],axisat[1],axisat[9]),
           y = c(7,7,10,10), lwd = 1.5)
   par(tcl = -0.3)
   axis(side = 1, pos = 7, at = seq(min(axisat),max(axisat), length.out = length(bks)),
        cex.axis = 0.9, labels = round(bks,round_dec))
+  } else if (matchingQ){
+    legend("top" , legend = c("0 to 0.5","0.5 to 1","1 to 1.5","1.5 to 5.5"), fill = cols,
+           bty = "n", cex = 1, ncol = 4, x.intersp = 0.5)
   }
+}
+
 
 #' A helper function for \code{\link{legendPlot}}
 #'

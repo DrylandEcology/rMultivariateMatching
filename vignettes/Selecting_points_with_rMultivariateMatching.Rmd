@@ -1,0 +1,202 @@
+---
+title: "Selecting points with rMultivariateMatching"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Selecting_points_with_rMultivariateMatching}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+
+## Introduction
+
+This vignette describes a workflow for selecting an optimal subset of sites from within a study area that maximizes the area represented by a minimum number of sites. The method was designed to select sites for simulation, for the purpose of applying the interpolation function `interpolatePoints` to interpolate simulation output from the selected sites to create high-resolution maps of output variable across the study area. Importantly, the site selection method could also be used to select an optimal set of sites for field sampling. We illustrate the workflow using an example for the state of Wyoming. The code chunks in this document are meant to be run sequentially. Data relevant to this example are contained within the package. The site-selection method is described in:  
+
+    Renne, R.R., Schlaepfer, D.R., Palmquist, K.A., Lauenroth, W.K., & Bradford, J.B. In preparation. Estimating complex ecological variables at high resolution in heterogeneous terrain using a multivariate matching algorithm.  
+
+The site-selection method is meant to balance the cost of adding more sites (in terms of computational or other resources) with the benefit of representing a larger proportion of the study area. The site selection work-flow requires a set of variables that cover the study area, in the form of a stack of rasters. These variables should be relevant to the ecosystem and processes that are being simulated. In the example in Renne et al., we wanted to project the impacts of climate change, wildfire, and lifestock grazing on big sagebrush (*Artemisia tridentata*) plant communities in the western United States using STEPWAT2, an individual-based, gap dynamics plant simulation model (Palmquist, Bradford et al., 2018; Palmquist, Schlaepfer et al., 2018). We chose a set of six climate variables that capture the major drivers of plant community structure in drylands.  
+
+Similarity between sites is measured as the Euclidean distance of the standardized matching variables. Variables are standardized by dividing them by the maximum difference between two sites that could be considered analogous for each variable. These maximum differences are considered the "matching criteria" for each variable. For example, if two sites could be reasonably considered analogous as long as the mean annual precipitations were within 50 mm of one another, the matching criteria for mean annual precipitation could be set to 50 mm.  
+
+### Definitions
+
+* **matching variables** A set of variables relevant to the ecosystem and simulation model that are used to determine similarity between sites. Matching variables must be available as rasters covering the entire study area.
+* **matching criteria** Maximum allowable differences for each matching variable such that sites can be considered analogous.
+* **k-points** Site selection algorithm that uses multivariate clustering based on the unsupervised classification scheme, k-means (MacQueen 1967), to find groups of analogous sites across a study area. 
+* **subset cells** A subset of sites (selected using `kpoints` or determined from some other method) for simulation. Sites are defined as the centroid of the raster cells that they represent.
+* **target cells** All cells across a study area.  
+
+The figure below illustrates a conceptual diagram and overview of the site selection and interpolation methods and key terminology. First, a set of “matching variables” are selected and standardized using user-defined matching criteria. Next, the k-points algorithm is used to determine an optimal set of n “subset cells” for use in field sampling or simulation. All “target cells” are matched to one of the subset cells (matches are denoted by color in central panel). Point results (e.g., simulation output) for those cells are interpolated across the study area using multivariate matching to produce continuous, high-resolution maps of output, such as plant functional type biomass or ecohydrological variables. 
+
+<img src="Fig_1_added_text_v2.png" width="100%">
+
+```{r setup}
+library(rMultivariateMatching)
+```
+
+
+## Overview of the kpoints function
+
+In the `kpoints` function, a given number of sites (Subset cells) are randomly selected from all cells in the study area (Target cells). Then, each Target cell is assigned to a group according to it's nearest neighbor among the Subset cells using Euclidean distance of the weighted (standardized) matching variables. Next, the centroids (multivariate mean) of the groups are calculated and the Target cell that is the nearest neighbor to the centroid of each group is selected as one of an updated set of Subset cells. The rest of the Target cells are then assigned to one of the new groups and the process continues until a stopping criterion is met: either a predefined number of iterations are completed (`iter` parameter in `kpoints` function) or the change in area represented is at or below a designated threshold (`min_area` parameter in `kpoints` function) for five consecutive iterations. 
+
+Once a stopping criterion is met, the Subset cells for the iteration that represented the largest proportion of the study area are saved as the best solution. Stopping criteria are designed to stop the algorithm when an optimal solution has been found (little to no gain in represented area for additional iterations) and to prevent the algorithm from running indefinitely, i.e., it will stop after the designated number of iterations (`iter`) whether or not an optimal solution has been found. Because of the algorithm may stop prior to finding an optimal solution, suitable values for `iter` and `min_area` should be determined to ensure that the change in area represented by each iteration levels out before stopping (set `verify_stop` to `TRUE`.  
+
+Importantly, the `kpoints` function can take some time to run, particularly if `n_starts` is large and when solving over a range of possible values of `k`. Because of possibly long run times, `kpoints` generates text output at the start of each iteration that reports the time, iteration number, `k`, and start number, followed by text output at the end of each iteration that reports the iteration number, `k` and coverage (in $km^{2}$ and as a percentage of total area).
+
+## Identify variables for matching, selecting matching criteria, and determining the optimal number of points
+
+The first step is to identify the matching variables. This will depend on the data that are available and the ecosystem and processes in question. Matching variables must be provided as a stack of rasters (rasterStack, see raster package for detail).   
+
+Once you have identified your matching variables, you will need to convert the rasterStack to a data frame that can be used in subsequent functions in the rMultivariateMatching package. Importantly, it can be useful to include other variables that are not for matching but are still relevant to the ecosystem and processes in question so that you can use these to evaluate matching later on.
+
+### Prepare input data
+
+The `makeInputdata` function takes the rasterStack of matching (and other) variables and transforms it into the correct format to be used in subsequent functions.
+
+```{r}
+# Load targetcells data for Target Cells
+data(targetcells)
+# Create data frame of potential matching variables for Target Cells
+allvars <- makeInputdata(targetcells)
+```
+
+### Choose matching criteria to standardize matching variables
+
+The `choose_criteria` function runs through a data frame of different sets of matching criteria and calculates the proportion of areal coverage of each set. You can compare the areal coverage across the sets to determine an acceptable balance between how strict the criteria are and the proportion of the study area that can be represented by a given number of points. Importantly, you will need to choose a value for `k` (number of Subset cells) to run this function, which may need to be somewhat arbitrary if you have not yet run `kpoints` over a range of possible values of `k` to determine the optimal number of points. Realistically, determining matching criteria and `k` will involve some back and forth between running `kpoints` over a range of possible values for `k` with different sets of matching criteria. In this example, we have set `k` to 200.  
+
+The `kpoints` function will throw a warning if the number of random starts `n_starts` is set to 10. The solution of the `kpoints` algorithm may be strongly influenced by the initial random selection of points, and we recommend that you use a larger value than 1 for your own projects. A reasonable number of starts for testing matching criteria and determining the optimal value of `k` would be 10.
+
+```{r, results = FALSE, warning = FALSE}
+# Restrict data to matching variables of interest
+matchingvars <- allvars[,c("cellnumbers","x","y","bioclim_01","bioclim_04",
+                           "bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+
+# Create list of matching criteria to choose:
+# Look at 2.5%, 5%, & 10% of range and standard deviation for each variable
+range2.5pct <- apply(matchingvars[,4:ncol(matchingvars)],2,
+                     function(x){(max(x)-min(x))*0.025})
+range5pct <- apply(matchingvars[,4:ncol(matchingvars)],2,
+                   function(x){(max(x)-min(x))*0.05})
+range10pct <- apply(matchingvars[,4:ncol(matchingvars)],2,
+                    function(x){(max(x)-min(x))*0.1})
+stddev <- apply(matchingvars[,4:ncol(matchingvars)],2,sd)
+criteria_list <- list(range2.5pct, range5pct, range10pct, stddev)
+```
+#### Criteria list
+| bioclim_01 | bioclim_04 | bioclim_09 | bioclim_12 | bioclim_15 | bioclim_18 |
+|:----------:|:----------:|:----------:|:----------:|:----------:|:----------:|
+|   0.36     |  10.62     |    0.82    |    32.97   |     1.36   |    4.61    |
+|   0.73     |  21.23     |    1.64    |    65.93   |     2.72   |    9.21    |
+|   1.45     |  42.47     |    3.29    |    131.86  |     5.44   |    18.42   |
+|   2.49     |  60.37     |    7.41    |    170.74  |     13.53  |    34.27   |
+
+```{r}
+
+# Compare coverage with various criteria
+results2 <- choose_criteria(matchingvars, criteria_list = criteria_list, 
+                            n_starts = 10, k = 200, verify_stop = FALSE,
+                            raster_template = targetcells[[1]], 
+                            plot_coverage = FALSE)
+
+```
+
+In the above example, `plot_coverage` is set to `FALSE`. If `TRUE`, the `choose_criteia` will generate a barplot that shows the proportion of the study area that is represented by each set of matching criteria in `criteria_list`. You can also set `plot_coverage` to `FALSE` and use the `criteriaplot` function to visualize the results of the `choose_criteria` function, as shown below.
+
+```{r}
+# Plot coverage
+criteriaplot(results2, criteria_list)
+```
+
+<img src="criteriaplot.png" width="50%">
+
+### kpoints
+
+The `kpoints` function uses a data frame created using `makeInputdata` to determine multivariate clusters of analogous sites and select one site to represent each cluster. The number of clusters is designated as `k`. The optimal value of `k` can be determined by running the `kpoints` function for a series of possible `k` values and evaluating the change in the proportion of the study area that is represented as `k` increases. The proportion of the study area that is represented by the `k` points will increase with `k`, and `k` can be selected when the benefit of increasing represented area is outweighed by the cost associated with adding additional sites. 
+
+### Determine optimal number of points
+
+Then, we will test a range of `k` values from 25 to 100 in steps of 25. First, we run the `kpoints` function for this range of values saved as a vector called `klist`. Then we can visualize the change in the proportion of the study area covered by each `k` value using the `plotcoverage` function.
+
+Importantly, you will need to choose a set of matching criteria to run this function, which may need to be somewhat arbitrary if you have not yet run `choose_criteria` function to determine the best set of criteria for your project. Realistically, determining matching criteria and `k` will involve some back and forth between running `kpoints` over a list of possible values for `k` with different sets of matching criteria. In this example, we have set the matching criteria as either 5 or 10% of the range of each of the matching variables. Note that we first run `kpoints` for a single value for `k` and set `verify_stop` to `TRUE` (without saving the output to an object) so that we can verify that stopping criteria are appropriate. More information on verifying stopping criteria can be found [here](#verify-stopping-criteria).
+
+```{r}
+# Create vector of matching criteria
+criteria <- c(0.7,42,3.3,66,5.4,18.4)
+# Verify stopping criteria
+kpoints(matchingvars,criteria = criteria,klist = 200,
+                    n_starts = 10,min_area = 50,iter = 50,
+                    raster_template = targetcells[[1]], verify_stop = TRUE)
+```
+
+<img src="verifystoppingcriteria.png" width="50%">
+
+```{r}
+# Create sequence of values for k
+klist = seq(25,100, by = 25)
+# Run kpoints algorithm for klist
+results3 <- kpoints(matchingvars,criteria = criteria,klist = klist,
+                    n_starts = 10,min_area = 50,iter = 15,
+                    raster_template = targetcells[[1]], verify_stop = FALSE)
+```
+
+### plotcoverage
+
+The `plotcoverage` function takes output from the `kpoints` function that has been run over a ordered vector of possible values for `k` and plots the proportion of the study area that was represented by each value of `k`. This plot will be useful for determining an optimal value for `k`.
+
+```{r}
+# Find optimal number of points (k)
+plotcoverage(results3)
+```
+
+<img src="coverageklist.png" width="50%">
+
+### Verify stopping criteria
+
+Whenever the `kpoints` function is called (directly or indirectly, as in the `choose_criteria` function), it is important to verify that stopping criteria `iter` and `min_area` are appropriate. See the [Overview of the kpoints function](#overview-of-the-kpoints-function) for a more detailed description of these criteria.  
+
+You can verify stopping criteria by running the `kpoints` function with `verify_stop` set to `TRUE`. Again, it is important to verify stopping criteria during the process of determining matching criteria and choosing the optimal number of points. Setting `verify_stop` to `TRUE` for the `choose_criteria` and `kpoints` functions will display plots that allow you to visually verify that stopping criteria are appropriate.
+
+The stopping criteria are appropriate if none of the starts (represented by different lines) reaches `iter` (maximum iterations) and the proportion of the study area represented levels out before stopping (without running through excessive iterations for relatively little gain in represented area). If the lines fail to level off, try increasing `iter`. If the lines level off long before `iter`, try increasing `min_area`. 
+
+```{r, results = 'hide', warning = FALSE}
+# Create vector of matching criteria
+criteria <- c(0.7,42,3.3,66,5.4,18.4)
+
+# Verify stopping criteria for 200 points
+results1 <- kpoints(matchingvars,criteria = criteria,klist = 200,
+                    n_starts = 10,min_area = 50,iter = 50,
+                    raster_template = targetcells[[1]], verify_stop = TRUE,
+                    savebest = FALSE)
+```
+
+<img src="verifystopping_v2.png" width="50%">
+
+## Finding final selection of Subset cells using kpoints
+
+Once you have determined the matching variables, matching criteria, and an optimal and feasible number of points, you should run the `kpoints` function again. This time, you should set `n_starts` to a relatively large number to have a better chance of finding a solution that will represent as large a proportion of the study area as possible. Setting `n_starts` to 100 should be adequate, and you may choose a higher number if you wish.
+
+```{r}
+# Find final solution for k = 200
+results1 <- kpoints(matchingvars,criteria = criteria,klist = 200,
+                    n_starts = 100,min_area = 50,iter = 50,
+                    raster_template = targetcells[[1]], verify_stop = FALSE,
+                    savebest = FALSE)
+```
+
+
+## References
+
+MacQueen, J. (1967). Some methods for classification and analysis of multivariate observations. In Le Cam, L. M., & Neyman, J. (Eds.), *Proceedings of the Fifth Berkeley Symposium on Mathematical Statistics and Probability*. (Vol. 1, No. 14, pp. 281-297). University of California Press.  
+  
+Palmquist, K. A., Bradford, J. B., Martyn, T. E., Schlaepfer, D. R., & Lauenroth, W. K. (2018). STEPWAT2: an individual-based model for exploring the impact of climate and disturbance on dryland plant communities. *Ecosphere*, 9(8). https://doi.org/10.1002/ecs2.2394  
+
+Palmquist, K. A, Schlaepfer, D. R., Martyn, T. E., Bradford, J. B., & Lauenroth, W. K. (2018). DrylandEcology/STEPWAT2: STEPWAT2 Model Description (Palmquist, et al., 2018 Ecosphere). Zenodo. https://doi.org/10.5281/zenodo.1306924  

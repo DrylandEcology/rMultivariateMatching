@@ -5,10 +5,11 @@
 #' area using a set of matching variables to determine similarity among sites.
 #'
 #' @param matchingvars data frame generated using \code{\link{makeInputdata}} or formatted
-#' such that: rownames are 'cellnumbers' extracted using the \code{\link{raster::extract}}
+#' such that: rownames are 'cellnumbers' extracted using the
+#' \code{\link[raster-extract]{raster::extract()}}
 #' function, columns 2 and 3 correspond to x and y coordinates, and additional
 #' columns correspond to potential matching variables extracted using the
-#' \code{\link{raster::rasterToPoints}} function. Note that the 'cellnumbers'
+#' \code{\link[raster-rasterToPoints]{raster::rasterToPoints()}} function. Note that the 'cellnumbers'
 #' column must be present (and correspond to the cellnumbers of the raster used
 #' for `raster_template` for the \code{\link{kpoints}} function to work.
 #'
@@ -35,7 +36,7 @@
 #' a larger number (e.g., 100) should be used. Default value is 10.
 #'
 #' @param raster_template one of the raster layers used for input data.
-#' See \code{\link{raster::area}}.
+#' See \code{\link[raster-area]{raster::area()}}.
 #'
 #' @param verify_stop boolean. Indicates whether the algorithm should display
 #' figures to evaluate stopping criteria. Displays a plot of areal coverage vs
@@ -48,28 +49,28 @@
 #'
 #' @export
 #' @examples
-#' # Load bioclim data for Target Cells (from rMultivariateMatchingAlgorithms package)
-#' data(bioclim)
+#' # Load targetcells data for Target Cells
+#' data(targetcells)
 #' # Create data frame of potential matching variables for Target Cells
-#' y <- makeInputdata(bioclim)
-
-
-data(bioclim)
-# Create data frame of potential matching variables for Target Cells
-allvars <- makeInputdata(bioclim)
+#' y <- makeInputdata(targetcells)
+#' data(targetcells)
+#' # Create data frame of potential matching variables for Target Cells
+#' allvars <- makeInputdata(targetcells)
 #' # Restrict data to matching variables of interest
-matchingvars <- allvars[,c("cellnumbers","x","y","bioclim_01","bioclim_04","bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
-# Create vector of matching criteria
-criteria <- c(0.7,42,3.3,66,5.4,18.4)
-
-# Verify stopping criteria for 200 points
-results1 <- kpoints(matchingvars,criteria = criteria,klist = 200,n_starts = 1,
-                    min_area = 50,iter = 50,raster_template = bioclim[[1]],
-                    verify_stop = FALSE,savebest = FALSE)
+#' matchingvars <- allvars[,c("cellnumbers","x","y","bioclim_01","bioclim_04",
+#' "bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+#' # Create vector of matching criteria
+#' criteria <- c(0.7,42,3.3,66,5.4,18.4)
+#'
+#' # Verify stopping criteria for 200 points
+#' results1 <- kpoints(matchingvars,criteria = criteria,klist = 200,
+#' n_starts = 1,min_area = 50,iter = 50,
+#' raster_template = targetcells[[1]], verify_stop = TRUE,savebest = FALSE)
 
 
 kpoints <- function(matchingvars,criteria = 1,klist = 200,min_area = 50,
-                    n_starts = 10,iter = 50,raster_template=NULL,verify_stop = FALSE,
+                    n_starts = 10,iter = 50,raster_template=NULL,
+                    verify_stop = FALSE,
                     savebest = FALSE){
   if (is.null(matchingvars)){
     stop("Verify inputs: 'matchingvars' is missing.")
@@ -177,7 +178,7 @@ kpoints <- function(matchingvars,criteria = 1,klist = 200,min_area = 50,
       mean_centers <- apply(stdvars, 2, tapply, group_hist[,1], mean)
       # If k > 1, find the actual cells closest to centroids:
       if (k > 1){
-        # Add centroids onto bioclim:
+        # Add centroids onto targetcells:
         rownames(mean_centers) <- c((nrow(stdvars)+1):(nrow(stdvars)+k))
         stdvarsx <- rbind(stdvars, mean_centers)
         # Compute distance matrix and find nn's to each of centroids.
@@ -213,15 +214,19 @@ kpoints <- function(matchingvars,criteria = 1,klist = 200,min_area = 50,
     start_list[[st]] <-  list(center_points=point_history[[best_run]][,1:2], area = area_history[best_run])
     # Record area of best run for this start:
     area_history.k[st] <- area_history[best_run]
-    if (verify_stop == TRUE){
+    if (verify_stop){
     # Add last area_history onto list:
     area_iterations[[st]] <- area_history
+    }
+    if (verify_stop && st == 1){
     # Plot area_iterations to check stopping criteria
     # Need to verify that it is usually min_area that stops iterations, not iter
     par(mar = c(3,3,2,1), mgp = c(1.5,0.3,0), tcl = -0.2)
     plot(seq(0.5,1, by = 0.1)~c(seq(0,50, length.out = 6)), col = "white", xlab = "Number of Iterations",
          ylab = "Proportion of area covered", ylim = c(0,1), cex.lab = 1.2, cex.axis = 1.2,
          main = paste0("Verify stopping criteria: k = ", k))
+    }
+    if (verify_stop && st == n_starts){
     for (i in 1:length(area_iterations)){
       lines(c(area_iterations[[i]]/totalarea)~c(1:length(area_iterations[[i]])), col = rainbow(length(area_iterations))[i], type = "l",
             lwd = 1.5)
@@ -262,22 +267,22 @@ return(results)
 #' @return Plot of the proportion of the study area covered for each value of k,
 #' or if only one value of k was used, reports coverage for that solution.
 #'
-#' @export
 #' @examples
-#' # Load bioclim data for Target Cells (from rMultivariateMatchingAlgorithms package)
-#' data(bioclim)
-#' Create data frame of potential matching variables for Target Cells
-#' allvars <- makeInputdata(bioclim)
+#' # Load targetcells data for Target Cells
+#' data(targetcells)
+#' #Create data frame of potential matching variables for Target Cells
+#' allvars <- makeInputdata(targetcells)
 #' # Subset to include only matching variables
-#' matchingvars <- allvars[,c("cellnumbers","x","y","bioclim_01","bioclim_04","bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+#' matchingvars <- allvars[,c("cellnumbers","x","y","bioclim_01","bioclim_04",
+#' "bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
 #' # Create vector of matching criteria
 #' criteria <- c(0.7,42,3.3,66,5.4,18.4)
-#' # Designate template for areas raster
-#' areas = bioclim[[1]]
 #' # Create sequence of values for k
 #' klist = seq(25,100, by = 25)
 #' # Run kpoints algorithm for klist
-#' results3 <- kpoints(matchingvars,criteria = criteria,klist = klist,n_starts = 1,min_area = 50,iter = 15,raster_template = bioclim[[1]])
+#' results3 <- kpoints(matchingvars,criteria = criteria,klist = klist,
+#' n_starts = 1,min_area = 50,iter = 15,
+#' raster_template = targetcells[[1]], verify_stop = FALSE)
 #' # Find optimal number of points (k)
 #' plotcoverage(results3)
 

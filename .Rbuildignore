@@ -1,8 +1,6 @@
-^04_Evaluating_matching_siteselection\.code$
-^05_Interpolation_match_Subset_to_Target_cells\.code$
-^06_Evaluating_matching_interpolation\.code$
-^07_Leave_one_out_CV_code$
-^08_Interpolating_results_to_highres_maps\.code$
 ^LICENSE\.md$
 ^.*\.Rproj$
 ^\.Rproj\.user$
+^README\.Rmd$
+^doc$
+^Meta$
