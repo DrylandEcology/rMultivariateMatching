@@ -45,7 +45,23 @@
 #' @param savebest boolean. Saves solution for kpoints as .csv file of k Subset
 #' sites.
 #'
-#' @return
+#' @return A list, including:
+#'
+#' * `solutions` A data frame of the final solution of `k` Subset cells.
+#' Rownames correspond to the cellnumbers, and the 'x' and 'y' coordinates of
+#' the cells are included.
+#' * `solution_areas` The area (in $km^2$) represented by the Subset cells.
+#' * `totalarea` The area of the entire study area (in $km^2$).
+#' * `klist` The number of Subset cells (`k`) selected by the `kpoints` function.
+#' * `iter` This records the value used in the `kpoints` function for finding
+#' the solution.
+#' * `n_starts` This records the value used in the `kpoints` function for finding
+#' the solution.
+#' * `criteria` This records the values used in the `kpoints` function for finding
+#' the solution.
+#' * `min_area` This records the value used in the `kpoints` function for finding
+#' the solution.
+#'
 #'
 #' @export
 #' @examples

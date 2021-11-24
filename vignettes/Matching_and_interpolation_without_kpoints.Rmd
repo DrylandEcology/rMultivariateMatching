@@ -1,8 +1,8 @@
 ---
-title: "interpolation"
+title: "Matching_and_interpolation_without_kpoints"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{interpolation}
+  %\VignetteIndexEntry{Matching_and_interpolation_without_kpoints}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -15,5 +15,5 @@ knitr::opts_chunk$set(
 ```
 
 ```{r setup}
-#library(rMultivariateMatching)
+library(rMultivariateMatching)
 ```

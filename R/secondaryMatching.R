@@ -15,7 +15,7 @@
 #' the \code{\link{raster::rasterToPoints}} function. These data represent
 #' Target cells.
 #'
-#' @param matches data frame. Output returned from \code{\link{matchingquality}}
+#' @param matches data frame. Output returned from \code{\link{multivarmatch}}
 #' using primary matching variables (e.g., climate variables).
 #'
 #' @param subsetcells data frame with columns that correspond to those in
@@ -47,7 +47,7 @@
 #' for each treatment.
 #'
 #' @param criteria single value or vector of length equal to the number of
-#' secondary variables, where values corresponds to the matching criterion for
+#' secondary variables, where values correspond to the matching criterion for
 #' each secondary variable `secondaryvars`. If a single value, this will be used
 #' as matching criteria for all variables. Default value is 1, corresponding to
 #' using raw data for matching.
@@ -74,9 +74,9 @@
 #'
 #' @return Data frame of Target cells with coordinates ('x','y'), cellnumber of
 #' Target cell ('target_cell'), unique id of matched Subset cell ('subset_cell'),
-#' matching quality ('matching_quality'), unique id of Subset cell matched with
+#' matching quality ('matching_quality'), unique id of the Subset cell matched with
 #' secondary matching criteria ('subset_cell_secondary'), and matching quality of
-#' this secondary match ('matching_quality_secondary). Will save a raster of
+#' this secondary match ('matching_quality_secondary'). Will save a raster of
 #' matching quality if `saveraster` is TRUE and plot a map of matching quality if
 #' `plotraster` is TRUE.
 #'
@@ -102,7 +102,7 @@
 #' # Ensure that site_id will be values unique to subsetcells
 #' subsetcells$site_id <- paste0("00",subsetcells$site_id)
 #' # Find matches and calculate matching quality
-#' quals <- matchingquality(matchingvars, subsetcells=subsetcells, matchingvars_id = "cellnumbers",subsetcells_id = "site_id",
+#' quals <- multivarmatch(matchingvars, subsetcells=subsetcells, matchingvars_id = "cellnumbers",subsetcells_id = "site_id",
 #'                          raster_template = targetcells[[1]], subset_in_target = FALSE)
 #'
 #' # Subset to include only secondaryvars
@@ -146,7 +146,8 @@ secondaryMatching <- function(secondaryvars = NULL, matches = NULL, subsetcells 
                               other_treatments = NULL, is_loocv = FALSE,
                               raster_template,subset_in_target = FALSE,
                               saveraster=FALSE,plotraster=TRUE,
-                              filepath=getwd(), ...){
+                              filepath=getwd(),
+                              overwrite = FALSE, ...){
   # Check subset_in_target
   if (subset_in_target){
     stop("'subset_in_target = TRUE' does not have functionality at this time.")
@@ -287,14 +288,15 @@ secondaryMatching <- function(secondaryvars = NULL, matches = NULL, subsetcells 
   # Create spatial points dataframe
   ptsx <- sp::SpatialPointsDataFrame(matches[,1:2],
                                      data = matches,
-                                     proj4string = crs(raster_template))
+                                     proj4string = raster::crs(raster_template))
 
   # Create raster of qual (matching quality) using wydry as a template
   r <- raster::rasterize(ptsx, raster_template,
                          field = matches$matching_quality_secondary, fun = mean)
 
   if (saveraster){
-    raster::writeRaster(r,paste0(filepath,"/Matchingquality_secondary.tif"))
+    raster::writeRaster(r,paste0(filepath,"/Matchingquality_secondary.tif"),
+                        overwrite = overwrite)
   }
 
   if (plotraster){

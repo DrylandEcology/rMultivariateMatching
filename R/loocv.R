@@ -1,20 +1,103 @@
-#' Estimate matching error
+#' Leave-one-out cross-validation
 #'
 #' Use leave-one-out cross-validation of simulated sites to evaluate matching
-#' errors
+#' errors. This function takes each Subset cell and finds its nearest neighbor
+#' from among the remaining Subset cells using weighted (standardized) Euclidean
+#' distance of the matching variables, then calculates the differences between the
+#' simulated value of output variables for each Subset cell and the simulated value
+#' of output variables from its nearest neighbor.
+#'
+#' This function can be used for matching achieved with the \code{\link{multivarmatch}}
+#' function or matching that uses two-step matching, first with
+#' \code{\link{multivarmatch}}, followed by \code{\link{secondaryMatching}}. In
+#' case of the latter, `loocv` assumes a very specific experimental design. For
+#' each Subsetcell cell, there are five different soil types. There is one site-specific
+#' soil type that is unique to each Subset cell and four set soil soil types that
+#' were simulated for all Subset cells. In this case, the first step of matching
+#' uses only climate variables and the second step of matching identifies the
+#' best soil type from among the 5 available for the Subset cell with the best
+#' match based on the climate variables.
 #'
 #'
-#' @param
+#' @param matchingvars a data frame that includes all matching variables for the
+#' Subset cells. Rownames should correspond to the unique identifiers for each
+#' Subset cell. The first two columns correspond to 'x' and 'y' coordinates of
+#' the Subset cells (if none exist, use "NA"). The rest of the columns correspond
+#' to the matching variables.
 #'
-#' @param
+#' @param secondaryvars a data frame that includes the secondary matching variables
+#' for the Subset cells. The first column should correspond to the unique identifier
+#' for each Subset cell, and the next two columns should correspond to the 'x' and
+#' 'y' coordinates of the Subset cells (if non exist, use "NA"). The rest of the
+#' columns correspond to the secondary matching variables. Only needed if
+#' `secondarymatch` is TRUE.
 #'
-#' @param
+#' @param ouput_results data frame. Simulation output results for all simulated
+#' sites (Subset cells). The first column and the rownames should correspond to
+#' the unique identifiers for the Subsetcells. The unique identifiers should be a
+#' combination of the unique identifiers used for 'matchingvars' and 'secondaryvars',
+#' in the form 'matchingvars_id.treatment'. 'treatment' is a number
+#' that designates the treatments, where '1' corresponds to the unique site-specific
+#' treatment (i.e., site-specific soils) and subsequent numbers designate other
+#' treatments that were applied to all Subset cells (these will correspond to the
+#' rownames in `other_treatments`, see below).
 #'
-#' @param
+#' @param criteria1 single value or vector of length equal to the number of matching variables,
+#' where values correspond to the matching criterion for each matching variable
+#' in 'matchingvars'. If a single value, this will be used as matching criteria
+#' for all variables. Default value is 1, corresponding to using raw data for
+#' matching.
 #'
-#' @param
+#' @param criteria2 single value or vector of length equal to the number of
+#' secondary variables, where values correspond to the matching criterion for
+#' each secondary variable `secondaryvars`. If a single value, this will be used
+#' as matching criteria for all variables. Default value is 1, corresponding to
+#' using raw data for matching. Only needed if `secondarymatch` is TRUE.
 #'
-#' @return
+#' @param secondarymatch boolean. Indicates whether the function should run
+#' secondary matching on the Subset cells. Defaults to TRUE
+#'
+#' @param secondaryvars_id character. Provides the column name for the unique
+#' identifiers in the 'secondaryvars' data frame (should be the first column).
+#' Defaults to "cellnumbers". Only needed if `secondarymatch` is TRUE.
+#'
+#' @param reference_treatment character. Designates a number to represent the
+#' reference treatment. Default value is '1'. Only needed if `secondarymatch` is
+#' TRUE.
+#'
+#' @param n_neighbors numeric. The number of nearest neighbors to search for among
+#' the Subset cells. To achieve leave-one-out cross-validation, this number must be
+#' set to 2. The nearest neighbor of each Subset cells is itself, so the second
+#' nearest neighbor will correspond the closest non-self neighbor. Default value
+#' is 2.
+#'
+#' @param other_treatments a data frame that gives the secondary variables for the
+#' set treatments. The rownames should correspond to unique identifiers for each
+#' treatment (e.g., 2-total number of treatments if the `reference_treatment` is '1').
+#' Only needed if `secondarymatch` is TRUE.
+#'
+#' @param subset_in_target boolean. Passed to \code{\link{multivarmatch}}. Default
+#' value is FALSE and should not be changed.
+#'
+#' @param saveraster boolean. Passed to \code{\link{multivarmatch}}. Default
+#' value is FALSE and should not be changed.
+#'
+#' @param plotraster Passed to \code{\link{multivarmatch}}. Default
+#' value is FALSE and should not be changed.
+#'
+#' @param ... additional parameters to be passed to \code{\link{multivarmatch}}
+#' and/or \code{\link{secondaryMatching}}.
+#'
+#' @return Data frame of Target cells with coordinates ('x','y'), cellnumber of
+#' Target cell ('target_cell'), unique id of matched Subset cell ('subset_cell')
+#' and matching quality ('matching_quality'). (If `secondarymatch` is TRUE, it will
+#' also include the unique id of the Subset cell matched with secondary matching
+#' criteria ('subset_cell_secondary'), and matching quality of this secondary match
+#' ('matching_quality_secondary')). Additional columns correspond to the difference
+#' between the simulated values of output variables for each Subset cell and the
+#' simulated values of output variables from its nearest neighbor. These values
+#' can be squared and averaged to get the average squared cross-validated
+#' matching error for each output variable.
 #'
 #'
 #' @examples
@@ -23,7 +106,6 @@
 #' # Pull out only matching variables and remove duplicates
 #' matchingvars <- subsetcells[,c("site_id","X_WGS84","Y_WGS84","bioclim_01","bioclim_04",
 #'                                "bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
-#'
 #' # Fix names
 #' names(matchingvars) <- c("cellnumbers","x","y",names(matchingvars)[4:9])
 #' # Remove duplicates (we will first match on climate only)
@@ -63,8 +145,7 @@ loocv <- function(matchingvars, secondaryvars, ouput_results = NULL,
                   criteria1 = 1, criteria2 = 1, secondarymatch = TRUE,
                   secondaryvars_id = "cellnumbers", reference_treatment = "1",
                    n_neighbors = 2,
-                  other_treatments = NULL,
-                  raster_template = NULL,subset_in_target = FALSE,
+                  other_treatments = NULL,subset_in_target = FALSE,
                   saveraster=FALSE,plotraster=FALSE, ...){
 
   # Standardize variables of interest
@@ -127,4 +208,30 @@ loocv <- function(matchingvars, secondaryvars, ouput_results = NULL,
   # Fix names
   names(quals2)[8:ncol(quals2)] <- paste0(names(output_results)[2:ncol(output_results)],"_diff")
   return(quals2)
+}
+
+#' Estimate matching errors
+#'
+#' Use the output from \code{\link{loocv}} to estimate matching errors for each
+#' output variable
+#'
+#'
+#' @param loocv_output a data frame produced by the \code{\link{loocv}} function.
+#'
+#'
+#' @return
+#'
+#'
+#' @examples
+#' # Get subsetcells
+#' data(subsetcells)
+#'
+#'
+#'
+
+
+cverrors <- function(loocv_output = NULL){
+
+
+
 }

@@ -14,6 +14,9 @@ knitr::opts_chunk$set(
 )
 ```
 
+
+ These sites may be determined in any way, for example they could be sites defined by a regular grid over the study area (as in our interpolation example in Renne et al.), or they could be the location of long-term study sites.
+
 ```{r setup}
 #library(rMultivariateMatching)
 ```

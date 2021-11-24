@@ -69,19 +69,22 @@
 #' Create data frame of potential matching variables for Target Cells
 #' allvars <- makeInputdata(targetcells)
 #' # Restrict data to matching variables of interest
-#' matchingvars <- allvars[,c("cellnumbers","x","y","bioclim_01","bioclim_04","bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+#' matchingvars <- allvars[,c("cellnumbers","x","y","bioclim_01","bioclim_04",
+#' "bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
 #' # Create vector of matching criteria
 #' criteria <- c(0.7,42,3.3,66,5.4,18.4)
 #' # Find solution for k = 200
-#' results1 <- kpoints(matchingvars,criteria = criteria,klist = 200,n_starts = 1,min_area = 50,iter = 50,raster_template = targetcells[[1]])
+#' results1 <- kpoints(matchingvars,criteria = criteria,klist = 200,
+#' n_starts = 1,min_area = 50,iter = 50,raster_template = targetcells[[1]])
 #'
 #' # For example with subset_in_target = TRUE
 #' # Get points from solution to kpoints algorithm
 #' subsetcells <- results1$solutions[[1]]
 #' # Find matches and calculate matching quality
-#'quals <- matchingquality(matchingvars, subsetcells, criteria = criteria,
+#' quals <- multivarmatch(matchingvars, subsetcells, criteria = criteria,
 #'                         matchingvars_id = "cellnumbers", addpoints = FALSE,
-#'                         raster_template = targetcells[[1]], subset_in_target = TRUE)
+#'                         raster_template = targetcells[[1]],
+#'                         subset_in_target = TRUE)
 #'
 #' # For example with subset_in_target = FALSE
 #' # Get points from solution to kpoints algorithm
@@ -90,19 +93,23 @@
 #' # we want to match on climate only)
 #' subsetcells <- subsetcells[!duplicated(subsetcells$site_id),]
 #' # Pull out matching variables only, with site_id that identifies unique climate
-#' subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84",names(matchingvars)[4:9])]
+#' subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84",
+#' names(matchingvars)[4:9])]
 #' # Ensure that site_id will be values unique to subsetcells
 #' subsetcells$site_id <- paste0("00",subsetcells$site_id)
 #' # Find matches and calculate matching quality
-#' quals <- matchingquality(matchingvars, subsetcells, criteria = criteria,
-#'                          matchingvars_id = "cellnumbers",subsetcells_id = "site_id",
-#'                          raster_template = targetcells[[1]], subset_in_target = FALSE, addpoints = FALSE)
+#' quals <- multivarmatch(matchingvars, subsetcells, criteria = criteria,
+#'                          matchingvars_id = "cellnumbers",
+#'                          subsetcells_id = "site_id",
+#'                          raster_template = targetcells[[1]],
+#'                          subset_in_target = FALSE, addpoints = FALSE)
 
 
-matchingquality <- function(matchingvars,subsetcells,matchingvars_id = "cellnumbers",
+multivarmatch <- function(matchingvars,subsetcells,matchingvars_id = "cellnumbers",
                             subsetcells_id = NULL, criteria = 1, n_neighbors = 1,
                             raster_template,subset_in_target = TRUE,
-                            saveraster=FALSE,plotraster=TRUE,filepath=getwd(), ...){
+                            saveraster=FALSE,plotraster=TRUE,filepath=getwd(),
+                            overwrite = FALSE, ...){
   # If no standardization or if standardization is the same for all matching variables
   if (length(criteria)==1){
     criteria = rep(criteria, (ncol(matchingvars)-3))
@@ -196,13 +203,15 @@ matchingquality <- function(matchingvars,subsetcells,matchingvars_id = "cellnumb
 
   if (saveraster | plotraster){
   # Create spatial points dataframe
-  ptsx <- sp::SpatialPointsDataFrame(qual[,1:2], data = qual, proj4string = crs(raster_template))
+  ptsx <- sp::SpatialPointsDataFrame(qual[,1:2], data = qual,
+                                     proj4string = raster::crs(raster_template))
 
   # Create raster of qual (matching quality) using wydry as a template
   r <- raster::rasterize(ptsx, raster_template, field = qual$matching_quality, fun = mean)
 
   if (saveraster){
-    raster::writeRaster(r,paste0(filepath,"/Matchingquality.tif"))
+    raster::writeRaster(r,paste0(filepath,"/Matchingquality.tif"),
+                        overwrite = overwrite)
   }
 
   if (plotraster){
@@ -253,7 +262,7 @@ matchingquality <- function(matchingvars,subsetcells,matchingvars_id = "cellnumb
 #' `subsetcells`that provides the unique identifiers for target cells. Defaults
 #' to NULL.
 #'
-#' @param matches data frame output from the \code{\link{matchingquality}}
+#' @param matches data frame output from the \code{\link{multivarmatch}}
 #' function.
 #'
 #' @param subset_in_target boolean. Indicates if Subset cells have been selected
@@ -283,6 +292,9 @@ matchingquality <- function(matchingvars,subsetcells,matchingvars_id = "cellnumb
 #' data(targetcells)
 #' # Create data frame of potential matching variables for Target Cells
 #' allvars <- makeInputdata(targetcells)
+#' # Subset to include only matching variables
+#' matchingvars <- allvars[,c("cellnumbers","x","y","bioclim_01","bioclim_04",
+#' "bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
 #' # Create vector of matching criteria
 #' criteria <- c(0.7,42,3.3,66,5.4,18.4)
 #  # Find solution for k = 200
@@ -292,7 +304,7 @@ matchingquality <- function(matchingvars,subsetcells,matchingvars_id = "cellnumb
 #' # Get points from solution to kpoints algorithm
 #' subsetcells <- results1$solutions[[1]]
 #' # Find matches and calculate matching quality
-#' quals <- matchingquality(matchingvars, subsetcells, matchingvars_id = "cellnumbers", raster_template = targetcells[[1]], subset_in_target = TRUE)
+#' quals <- multivarmatch(matchingvars, subsetcells, matchingvars_id = "cellnumbers", raster_template = targetcells[[1]], subset_in_target = TRUE)
 #' # Run evaluateMatching
 #' sddiffs <- evaluateMatching(allvars = allvars, matches = quals,
 #'                             matchingvars_id = "cellnumbers",
@@ -311,7 +323,7 @@ matchingquality <- function(matchingvars,subsetcells,matchingvars_id = "cellnumb
 #' # Ensure that site_id will be values unique to subsetcells
 #' subsetcells1$site_id <- paste0("00",subsetcells$site_id)
 #' # Find matches and calculate matching quality
-#' quals <- matchingquality(matchingvars, subsetcells=subsetcells1, matchingvars_id = "cellnumbers",subsetcells_id = "site_id",
+#' quals <- multivarmatch(matchingvars, subsetcells=subsetcells1, matchingvars_id = "cellnumbers",subsetcells_id = "site_id",
 #'                          raster_templat = targetcells[[1]], subset_in_target = FALSE)
 #' # Get all variables for Subset cells now:
 #' subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84",names(allvars)[4:22])]
@@ -363,6 +375,15 @@ evaluateMatching <- function(allvars = NULL, matches = NULL,matchingvars_id = "c
     results[2,i-3] <- sd(subsetcells[as.character(matchedonly[,ncol(matchedonly)]),colnames(allvars1)[i]]-matchedonly[,i])
     }
   }
+  # Remove any columns with all NAs
+  rmvec <- vector()
+  for (i in 1:ncol(results)){
+    if (sum(is.na(results[,i])) == nrow(results)){
+      rmvec <- append(rmvec,i)
+    }
+  }
+  results <- results[,-rmvec]
+  # Plot if desired
   if (plot_diffs){
   # Create barplot showing standard deviation of differences between Target and Subset cells
   par(mar = c(2,max(nchar(names(results)))/3,2,1), mgp = c(1.5,0.2,0), tcl = 0.3,
@@ -387,7 +408,7 @@ evaluateMatching <- function(allvars = NULL, matches = NULL,matchingvars_id = "c
 #' between the Subset cells matched to each Target cell and the Subset cells
 #' matched to the eight adjacent neighbors of that Target cell.
 #'
-#' @param matches data frame output from the \code{\link{matchingquality}}
+#' @param matches data frame output from the \code{\link{multivarmatch}}
 #' function.
 #'
 #' @param subsetcells if `subset_in_target` is TRUE, this should be a data frame
@@ -409,7 +430,7 @@ evaluateMatching <- function(allvars = NULL, matches = NULL,matchingvars_id = "c
 #' `subsetcells`that provides the unique identifiers for target cells. Defaults
 #' to NULL.
 #'
-#' @param matches data frame output from the \code{\link{matchingquality}}
+#' @param matches data frame output from the \code{\link{multivarmatch}}
 #' function.
 #'
 #' @param subset_in_target boolean. Indicates if Subset cells have been selected
@@ -447,13 +468,12 @@ evaluateMatching <- function(allvars = NULL, matches = NULL,matchingvars_id = "c
 #'
 #' @param raster_template one of the raster layers used for input data.
 #'
-#' @return Data frame of the standard deviation of differences between Target and
-#' their matched Subset cells for all variables supplied in `allvars` data frame.
-#' The first row corresponds to the standard deviation of differences between
-#' Target and Subset cells for all cells and the second row corresponds to the
-#' standard deviation of differences between Target and Subset cells for only those
-#' Target cells with matching quality <= `matching_distance`. Units are the same
-#' as the units for each variable in `allvars`.
+#' @return Data frame with the distance between Target and matched Subset cells
+#' ('target_to_subset_distance') and the average distance between the Subset cell
+#' matched to each Target cell and the Subset cells matched to the eight adjacent
+#' Target cells ('avgdistance_to_neighbors'). The first column and the rownames
+#' correspond to the unique identifiers for the Target cells, and columns 2 and 3
+#' correspond to the 'x' and 'y' coordinates of the Target cells.
 #'
 #' @examples
 #' # Load targetcells data for Target Cells (from rMultivariateMatchingAlgorithms package)
@@ -468,10 +488,10 @@ evaluateMatching <- function(allvars = NULL, matches = NULL,matchingvars_id = "c
 #' # Get points from solution to kpoints algorithm
 #' subsetcells <- results1$solutions[[1]]
 #' # Find matches and calculate matching quality
-#' quals <- matchingquality(matchingvars, subsetcells, matchingvars_id = "cellnumbers", raster_template = targetcells[[1]], subset_in_target = TRUE)
+#' quals <- multivarmatch(matchingvars, subsetcells, matchingvars_id = "cellnumbers", raster_template = targetcells[[1]], subset_in_target = TRUE)
 #' # Look at geographic distances
 #' geodist <- evaluateGeoDist(matches = quals, subsetcells = subsetcells,
-#'                            subsetcells_id = 'site_id', subset_in_target = TRUE,
+#'                            subset_in_target = TRUE,
 #'                            exclude_poor_matches = TRUE, matching_distance = 1.5,
 #'                            longlat = TRUE, raster_template = targetcells[[1]])
 #'
@@ -487,7 +507,7 @@ evaluateMatching <- function(allvars = NULL, matches = NULL,matchingvars_id = "c
 #' # Ensure that site_id will be values unique to subsetcells
 #' subsetcells$site_id <- paste0("00",subsetcells$site_id)
 #' # Find matches and calculate matching quality
-#' quals <- matchingquality(matchingvars, subsetcells=subsetcells, matchingvars_id = "cellnumbers",subsetcells_id = "site_id",
+#' quals <- multivarmatch(matchingvars, subsetcells=subsetcells, matchingvars_id = "cellnumbers",subsetcells_id = "site_id",
 #'                          raster_template = targetcells[[1]], subset_in_target = FALSE)
 #'
 #' # Look at geographic distances
@@ -501,7 +521,7 @@ evaluateGeoDist <- function(matches, subsetcells, subsetcells_id = 'site_id',
                             matching_distance = 1.5, longlat = T, raster_template = NULL,
                             map_distances = TRUE, map_neighbor_distances = TRUE,
                             which_distance = "both",saverasters = FALSE,
-                            filepath = getwd()){
+                            filepath = getwd(), overwrite = FALSE){
   if (which_distance == "simple" | which_distance == "both"){
   # Create matrix of lat/long for cells with matching quality <= 1.5
   # First two columns are coordinates of matched Subset cells
@@ -542,14 +562,17 @@ evaluateGeoDist <- function(matches, subsetcells, subsetcells_id = 'site_id',
   colnames(distmatrix)[3] <- "distance"
 
   # Create spatial points dataframe from differences:
-  ptsx <- sp::SpatialPointsDataFrame(distmatrix[,1:2], data = data.frame(dist = distkm), proj4string = crs(raster_template))
+  ptsx <- sp::SpatialPointsDataFrame(distmatrix[,1:2],
+                                     data = data.frame(dist = distkm),
+                                     proj4string = raster::crs(raster_template))
 
   # Rasterize using wydry as a template
   r <- raster::rasterize(ptsx, raster_template, field = ptsx$dist, fun = mean)
 
   # Save raster, if desired
   if (saverasters){
-    raster::writeRaster(r,paste0(filepath,"/Distance_km_subset_to_target.tif"))
+    raster::writeRaster(r,paste0(filepath,"/Distance_km_subset_to_target.tif"),
+                        overwrite = overwrite)
   }
 
   # Make map of raster, if desired
@@ -595,7 +618,9 @@ evaluateGeoDist <- function(matches, subsetcells, subsetcells_id = 'site_id',
   }
 
   # Create points dataframe
-  ptsx <- sp::SpatialPointsDataFrame(pts3[,1:2], data = data.frame(thispt = rep(1,nrow(pts3))), proj4string = crs(raster_template))
+  ptsx <- sp::SpatialPointsDataFrame(pts3[,1:2],
+                                     data = data.frame(thispt = rep(1,nrow(pts3))),
+                                     proj4string = raster::crs(raster_template))
 
   # Rasterize using raster_template
   r <- raster::rasterize(ptsx, raster_template, field = 1 , fun = 'first')
@@ -623,14 +648,17 @@ evaluateGeoDist <- function(matches, subsetcells, subsetcells_id = 'site_id',
   adjdist$y <- pts3[adjdist$cellnumber, 2]
 
   # Create spatial points dataframe from differences:
-  ptsx <- sp::SpatialPointsDataFrame(adjdist[,3:4], data = data.frame(dist = adjdist[,2]), proj4string = crs(raster_template))
+  ptsx <- sp::SpatialPointsDataFrame(adjdist[,3:4],
+                                     data = data.frame(dist = adjdist[,2]),
+                                     proj4string = raster::crs(raster_template))
 
   # Rasterize using wydry as template
   r <- raster::rasterize(ptsx, raster_template, field = ptsx$dist, fun = mean)
 
   # Save raster, if desired
   if (saverasters){
-    raster::writeRaster(r,paste0(filepath,"/Distance_km_avg_matchedsubset_to_matchedneighbors.tif"))
+    raster::writeRaster(r,paste0(filepath,"/Distance_km_avg_matchedsubset_to_matchedneighbors.tif"),
+                        overwrite = overwrite)
   }
 
   # Make map of raster, if desired
