@@ -1,8 +1,8 @@
 ---
-title: "Matching and interpolation without kpoints"
+title: "Two-step matching and interpolation without kpoints"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Matching_and_interpolation_without_kpoints}
+  %\VignetteIndexEntry{Two_step_matching_and_interpolation_without_kpoints}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -10,8 +10,7 @@ vignette: >
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>",
-  eval = FALSE
+  comment = "#>"
 )
 ```
 
@@ -30,9 +29,9 @@ In the interpolation example in *Renne et al.*, our goal was to generate high-re
 
 ## Overview and definitions
 
-In this vignette, we assume that we have already determined appropriate **matching variables** and **matching criteria** and run simulations for the **subset cells**.  Note that this workflow is distinct from a workflow where the simulated sites (**subset cells**) are selected using `kpoints`. A workflow for that scenario can be found in the "Matching and interpolation with kpoints" vignette. Furthermore, although the example used here is derived from the interpolation example in *Renne et al.* that used a two-step matching process to fit the experimental design described in Bradford et al., (2019), we limit matching in this example to a single step. A workflow that illustrates two-step matching and interpolation can be found in the "Two step matching and interpolation without kpoints" vignette.
+In this vignette, we assume that we have already determined appropriate **matching variables** and **matching criteria** and run simulations for the **subset cells**.  Note that this workflow is distinct from a workflow where the simulated sites (**subset cells**) are selected using `kpoints`. A workflow for that scenario can be found in the "Matching and interpolation with kpoints" vignette. Furthermore, the example here is derived from the interpolation example in *Renne et al.* that used a two-step matching process to fit the experimental design described in Bradford et al., (2019). This workflow is somewhat specialized to that experimental design. However, a workflow that illustrates single-step matching and interpolation using **subset cells** that are not derived from the `kpoints` function can be found in the "Matching and interpolation without kpoints" vignette.
 
-The functions in the `rMultivariateMatching` package measure similarity between sites as the Euclidean distance of standardized (i.e., weighted) **matching variables**. Each variable is standardized by dividing it by the maximum amount of difference that would still allow two sites to be considered analogous for that variable. These maximum differences are called the **matching criteria** for each variable. For example, if two sites could be reasonably considered analogous as long as they were within 50 mm of eachother for mean annual precipitation (MAP), the matching criteria for MAP could be set to 50 mm. Distances are calculated within the `rMultivariateMatching` function using the `distances` package (Savje 2019).
+The functions in the `rMultivariateMatching` package measure similarity between sites as the Euclidean distance of standardized (i.e., weighted) **matching variables**. Each variable is standardized by dividing it by the maximum amount of difference that would still allow two sites to be considered analogous for that variable. These maximum differences are called the **matching criteria** for each variable. For example, if two sites could be reasonably considered analogous as long as they were within 50 mm of each other for mean annual precipitation (MAP), the matching criteria for MAP could be set to 50 mm. Distances are calculated within the `rMultivariateMatching` function using the `distances` package (Savje 2019).
 
 ### Definitions
 

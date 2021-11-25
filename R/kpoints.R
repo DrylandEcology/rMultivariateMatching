@@ -67,18 +67,19 @@
 #' @examples
 #' # Load targetcells data for Target Cells
 #' data(targetcells)
-#' # Create data frame of potential matching variables for Target Cells
-#' y <- makeInputdata(targetcells)
-#' data(targetcells)
+#'
 #' # Create data frame of potential matching variables for Target Cells
 #' allvars <- makeInputdata(targetcells)
+#'
 #' # Restrict data to matching variables of interest
 #' matchingvars <- allvars[,c("cellnumbers","x","y","bioclim_01","bioclim_04",
 #' "bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+#'
 #' # Create vector of matching criteria
 #' criteria <- c(0.7,42,3.3,66,5.4,18.4)
 #'
 #' # Verify stopping criteria for 200 points
+#' # Note: n_starts should be >= 10, it is 1 here to reduce run time.
 #' results1 <- kpoints(matchingvars,criteria = criteria,klist = 200,
 #' n_starts = 1,min_area = 50,iter = 50,
 #' raster_template = targetcells[[1]], verify_stop = TRUE,savebest = FALSE)
@@ -286,19 +287,26 @@ return(results)
 #' @examples
 #' # Load targetcells data for Target Cells
 #' data(targetcells)
+#'
 #' #Create data frame of potential matching variables for Target Cells
 #' allvars <- makeInputdata(targetcells)
+#'
 #' # Subset to include only matching variables
 #' matchingvars <- allvars[,c("cellnumbers","x","y","bioclim_01","bioclim_04",
 #' "bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+#'
 #' # Create vector of matching criteria
 #' criteria <- c(0.7,42,3.3,66,5.4,18.4)
+#'
 #' # Create sequence of values for k
 #' klist = seq(25,100, by = 25)
+#'
 #' # Run kpoints algorithm for klist
+#' # Note: n_starts should be >= 10, it is 1 here to reduce run time.
 #' results3 <- kpoints(matchingvars,criteria = criteria,klist = klist,
 #' n_starts = 1,min_area = 50,iter = 15,
 #' raster_template = targetcells[[1]], verify_stop = FALSE)
+#'
 #' # Find optimal number of points (k)
 #' plotcoverage(results3)
 

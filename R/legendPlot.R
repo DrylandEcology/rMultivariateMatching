@@ -24,6 +24,8 @@
 #' @examples
 #' # Load targetcells data for Target Cells
 #' data(targetcells)
+#'
+#' # Plot the raster with a legend
 #' legendPlot(targetcells[[1]])
 
 legendPlot <- function(x = NULL, thisVariable = names(x)[1], round_dec = 0,

@@ -32,15 +32,15 @@
 #' columns correspond to the secondary matching variables. Only needed if
 #' `secondarymatch` is TRUE.
 #'
-#' @param ouput_results data frame. Simulation output results for all simulated
+#' @param output_results data frame. Simulation output results for all simulated
 #' sites (Subset cells). The first column and the rownames should correspond to
-#' the unique identifiers for the Subsetcells. The unique identifiers should be a
-#' combination of the unique identifiers used for 'matchingvars' and 'secondaryvars',
-#' in the form 'matchingvars_id.treatment'. 'treatment' is a number
-#' that designates the treatments, where '1' corresponds to the unique site-specific
-#' treatment (i.e., site-specific soils) and subsequent numbers designate other
-#' treatments that were applied to all Subset cells (these will correspond to the
-#' rownames in `other_treatments`, see below).
+#' the unique identifiers for the Subsetcells. If `secondarymatch` is TRUE,
+#' the unique identifiers should be a combination of the unique identifiers used
+#' for 'matchingvars' and 'secondaryvars', in the form 'matchingvars_id.treatment'.
+#' 'treatment' is a number that designates the treatments, where '1' corresponds
+#' to the unique site-specific treatment (i.e., site-specific soils) and subsequent
+#' numbers designate other treatments that were applied to all Subset cells
+#' (these will correspond to the rownames in `other_treatments`, see below).
 #'
 #' @param criteria1 single value or vector of length equal to the number of matching variables,
 #' where values correspond to the matching criterion for each matching variable
@@ -76,15 +76,6 @@
 #' treatment (e.g., 2-total number of treatments if the `reference_treatment` is '1').
 #' Only needed if `secondarymatch` is TRUE.
 #'
-#' @param subset_in_target boolean. Passed to \code{\link{multivarmatch}}. Default
-#' value is FALSE and should not be changed.
-#'
-#' @param saveraster boolean. Passed to \code{\link{multivarmatch}}. Default
-#' value is FALSE and should not be changed.
-#'
-#' @param plotraster Passed to \code{\link{multivarmatch}}. Default
-#' value is FALSE and should not be changed.
-#'
 #' @param ... additional parameters to be passed to \code{\link{multivarmatch}}
 #' and/or \code{\link{secondaryMatching}}.
 #'
@@ -101,52 +92,98 @@
 #'
 #'
 #' @examples
+#' ########################
+#' # First, an example where secondarymatch = FALSE
+#' # Load targetcells data for Target Cells
+#' data(targetcells)
+#'
+#' # Create data frame of potential matching variables for Target Cells
+#' allvars <- makeInputdata(targetcells)
+#'
+#' # Create a mock dataset of output results
+#' output_results <- allvars[rownames(subsetcells),c("cellnumbers","bioclim_02",
+#'                                                   "bioclim_03","bioclim_16",
+#'                                                   "bioclim_17")]
+#'
+#' # Create dataset of matchingvars for subsetcells
+#' subset_matchingvars <- matchingvars[rownames(subsetcells),-1]
+#'
+#' # Run leave-one-out cross validation of mock output results
+#' loocv_results <- loocv(matchingvars = subset_matchingvars,
+#'                        output_results = output_results,
+#'                        criteria1 = criteria,
+#'                        secondarymatch = FALSE, n_neighbors = 2)
+#'
+#'
+#' ########################
+#' # Next, an example where secondarymatch = TRUE
 #' # Get subsetcells
 #' data(subsetcells)
+#'
 #' # Pull out only matching variables and remove duplicates
-#' matchingvars <- subsetcells[,c("site_id","X_WGS84","Y_WGS84","bioclim_01","bioclim_04",
-#'                                "bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+#' matchingvars <- subsetcells[,c("site_id","X_WGS84","Y_WGS84","bioclim_01",
+#' "bioclim_04","bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+#'
 #' # Fix names
 #' names(matchingvars) <- c("cellnumbers","x","y",names(matchingvars)[4:9])
+#'
 #' # Remove duplicates (we will first match on climate only)
 #' matchingvars <- matchingvars[!duplicated(matchingvars$cellnumbers),]
 #' rownames(matchingvars) <- matchingvars$cellnumbers
+#'
 #' # Remove cellnumbers column
 #' matchingvars <- matchingvars[,-1]
 #'
 #' # Pull out secondary vars and keep both identifiers
 #' secondaryvars <- subsetcells[,c("site_id","X_WGS84","Y_WGS84","sand","clay")]
+#'
 #' # Fix names
 #' names(secondaryvars) <- c("cellnumbers","x","y",names(secondaryvars)[4:5])
+#'
 #' # Convert sand and clay to percentage from fraction
 #' secondaryvars$sand <- secondaryvars$sand*100
 #' secondaryvars$clay <- secondaryvars$clay*100
+#'
 #' # Remove duplicates
 #' secondaryvars <- secondaryvars[!duplicated(secondaryvars$cellnumbers),]
+#'
+#' # Set rownames as cellnumbers
 #' rownames(secondaryvars) <- secondaryvars$cellnumbers
 #'
 #' # Bring in "other" treatments
 #' data(setsoiltypes)
 #' other_treatments = setsoiltypes
 #'
-#' # Set original criteria
+#' # Set original criteria (from first-step matching)
 #' criteria1 = c(0.7,42,3.3,66,5.4,18.4)
+#'
 #' # Calculate criteria for secondary matching
-#' criteria2 = c((max(subsetcells$sand,na.rm = T)-min(subsetcells$sand,na.rm = T))/10*100,
-#'              (max(subsetcells$clay,na.rm = T)-min(subsetcells$clay,na.rm = T))/10*100)
+#' criteria2 = c((max(subsetcells$sand,na.rm = T)-
+#'              min(subsetcells$sand,na.rm = T))/10*100,
+#'              (max(subsetcells$clay,na.rm = T)-
+#'              min(subsetcells$clay,na.rm = T))/10*100)
 #'
 #' # Bring in simulation output results of interest
-#' output_results = subsetcells[,c("site_ids","Dryprop","CwetWinter","CdrySummer",
-#'                                 "Cwet8","Dryall","Dryany")]
+#' output_results = subsetcells[,c("site_ids","Dryprop","CwetWinter",
+#' "CdrySummer","Cwet8","Dryall","Dryany")]
 #' rownames(output_results) <- output_results$site_ids
+#'
+#' # Run leave-one-out cross validation of output results
+#' loocv_results <- loocv(matchingvars = matchingvars,
+#'                        secondaryvars = secondaryvars,
+#'                        output_results = output_results,
+#'                        criteria1 = criteria1, criteria2 = criteria2,
+#'                        secondarymatch = TRUE,
+#'                        secondaryvars_id = "cellnumbers",
+#'                        reference_treatment = "1", n_neighbors = 2,
+#'                        other_treatments = other_treatments)
 
 
-loocv <- function(matchingvars, secondaryvars, ouput_results = NULL,
+loocv <- function(matchingvars, secondaryvars, output_results = NULL,
                   criteria1 = 1, criteria2 = 1, secondarymatch = TRUE,
                   secondaryvars_id = "cellnumbers", reference_treatment = "1",
                    n_neighbors = 2,
-                  other_treatments = NULL,subset_in_target = FALSE,
-                  saveraster=FALSE,plotraster=FALSE, ...){
+                  other_treatments = NULL, ...){
 
   # Standardize variables of interest
   stdvars <- matchingvars[,c("x","y")]
@@ -190,23 +227,27 @@ loocv <- function(matchingvars, secondaryvars, ouput_results = NULL,
   quals2 <- secondaryMatching(secondaryvars = secondaryvars, matches = qual1,
                               subsetcells = secondaryvars,
                               subsetcells_id = secondaryvars_id,
-                              subset_in_target = FALSE, criteria = criteria2,
+                              criteria = criteria2,
                               reference_treatment = "1",
-                              raster_template = raster_template,
+                              raster_template = NULL, saveraster=FALSE,
+                              plotraster=FALSE,
                               other_treatments = other_treatments,
                               is_loocv = TRUE, ...)
-
-
+    # set which column to pull subset cells from
+    thissubset = "subset_cell_secondary"
   } else if (!secondarymatch){
     quals2 <- qual1
+    # set which column to pull subset cells from
+    thissubset = "subset_cell"
   }
 
   # Now calculate matching errors and add onto matching quality
   for (i in 2:ncol(output_results)){
-    quals2[,ncol(quals2)+1] <- output_results[quals2$target_cell, i] - output_results[quals2$subset_cell_secondary,i]
+    quals2[,ncol(quals2)+1] <- output_results[quals2$target_cell, i] - output_results[quals2[,thissubset],i]
+    # Fix names
+    names(quals2)[ncol(quals2)] <- paste0(names(output_results)[i],"_diff")
+
   }
-  # Fix names
-  names(quals2)[8:ncol(quals2)] <- paste0(names(output_results)[2:ncol(output_results)],"_diff")
   return(quals2)
 }
 
@@ -219,19 +260,45 @@ loocv <- function(matchingvars, secondaryvars, ouput_results = NULL,
 #' @param loocv_output a data frame produced by the \code{\link{loocv}} function.
 #'
 #'
-#' @return
+#' @return a named vector where items are the estimated matching error for each
+#' output variable calculated using leave-one-out cross validation of the
+#' Subset cells (simulated sites).
 #'
 #'
 #' @examples
-#' # Get subsetcells
-#' data(subsetcells)
+#' ########################
+#' # An example where secondarymatch = FALSE
+#' # Load targetcells data for Target Cells
+#' data(targetcells)
 #'
+#' # Create data frame of potential matching variables for Target Cells
+#' allvars <- makeInputdata(targetcells)
 #'
+#' # Create a mock dataset of output results
+#' output_results <- allvars[rownames(subsetcells),c("cellnumbers","bioclim_02",
+#'                                                   "bioclim_03","bioclim_16",
+#'                                                   "bioclim_17")]
 #'
+#' # Create dataset of matchingvars for subsetcells
+#' subset_matchingvars <- matchingvars[rownames(subsetcells),-1]
+#'
+#' # Run leave-one-out cross validation of mock output results
+#' loocv_results <- loocv(matchingvars = subset_matchingvars,
+#'                        output_results = output_results,
+#'                        criteria1 = criteria,
+#'                        secondarymatch = FALSE, n_neighbors = 2)
+#'
+#' # Calculate estimates of matching error for output variables
+#' estimated_errors <-  cverrors(loocv_output = loocv_results,
+#' first_output_column = 6)
 
 
-cverrors <- function(loocv_output = NULL){
-
-
-
+cverrors <- function(loocv_output = NULL, first_output_column = NULL){
+  results <- vector()
+  for (i in first_output_column:ncol(loocv_output)){
+  results[i-first_output_column+1] <- sqrt(mean(loocv_output[,i]^2))
+  }
+  names(results) <- gsub("_diff","",
+                         names(loocv_output)[first_output_column:ncol(loocv_output)])
+  return(results)
 }

@@ -72,6 +72,27 @@ makeInputdata <- function(x){
 #' @param plot_coverage boolean. Indicates whether the algorithm should display
 #' a barplot of the coverage for each set of criteria. Default is TRUE.
 #'
+#' @param subset_in_target boolean. Indicates if Subset cells have been selected
+#' from Target cells using \code{\link{kpoints}} function
+#'
+#' #' @param subsetcells data frame. Passed to \code{\link{multivarmatch}} function
+#' if `subset_in_target` is FALSE. This should be a data frame of subset
+#' cells with column names corresponding exactly to those in `matchingvars` and
+#' row names should be unique identifiers.
+#'
+#' @param matchingvars_id character or numeric. Refers to the column in
+#' `matchingvars`that provides the unique identifiers for Target cells. Defaults
+#' to "cellnumbers", which is the unique ID column created by \code{\link{makeInputdata}}.
+#'
+#' @param subsetcells_id character or numeric. Refers to the column in
+#' `subsetcells`that provides the unique identifiers for Subset cells. Defaults
+#' to "site_id".
+#'
+#' @param matching_distance Gives the maximum allowable matching quality
+#' value (weighted Euclidean distance) between Target and Subset cells, when
+#' `subset_in_target` is FALSE. Default value is 1 so that output will be
+#' comparable to output from `choose_criteria` when `subset_in_target` is TRUE.
+#'
 #' @param ... accepts additional parameters to \code{\link{kpoints}} function.
 #'
 #' @return
@@ -97,16 +118,49 @@ makeInputdata <- function(x){
 #' stddev <- apply(matchingvars[,4:ncol(matchingvars)],2,sd)
 #' criteria_list <- list(range2.5pct, range5pct, range10pct, stddev)
 #'
+#' ###################################
+#' # First an example where subset_in_target = TRUE
 #' # Compare coverage with various criteria
+#' # Note: n_starts should be >= 10, it is 1 here to reduce run time.
 #' results2 <- choose_criteria(matchingvars, criteria_list = criteria_list,
 #' n_starts = 1, k = 200, raster_template = targetcells[[1]],
-#' plot_coverage = TRUE)
+#' subset_in_target = TRUE, plot_coverage = TRUE)
+#'
+#' ###################################
+#' # Now an example where subset_in_target is FALSE
+#' # Bring in Subset cell data
+#' data(subsetcells)
+#' # Remove duplicates (representing cells with same climate but different soils--
+#' # we want to match on climate only)
+#' subsetcells <- subsetcells[!duplicated(subsetcells$site_id),]
+#' # Pull out matching variables only, with site_id that identifies unique climate
+#' subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84"
+#'                               names(matchingvars)[4:9])]
+#' # Ensure that site_id will be values unique to subsetcells
+#' subsetcells$site_id <- paste0("00",subsetcells$site_id)
+#' # Run choose_criteria function to evaluate different matching criteria
+#' coverage <- choose_criteria(matchingvars = matchingvars,
+#'                             criteria_list = criteria_list,
+#'                             plot_coverage = TRUE,
+#'                             raster_template = targetcells[[1]],
+#'                             subset_in_target = FALSE,
+#'                             subsetcells = subsetcells,
+#'                             matchingvars_id = "cellnumbers",
+#'                             subsetcells_id = "site_id")
 
 choose_criteria <- function(matchingvars = NULL, criteria_list = NULL,
-                            k = 200,plot_coverage = TRUE,...){
+                            k = 200,plot_coverage = TRUE,
+                            raster_template = NULL,
+                            subset_in_target = TRUE,
+                            subsetcells = NULL,
+                            matchingvars_id = "cellnumbers",
+                            subsetcells_id = "site_id",
+                            matching_distance = 1,
+                            ...){
   if (class(criteria_list) != "list" | is.null(criteria_list)){
     stop("Verify inputs: 'criteria_list' is not a list or is missing.")
   }
+  if (subset_in_target){
   criteria_results <- list()
   for (cr in 1:length(criteria_list)){
     print(paste0("Using criteria: ", criteria_list[cr]))
@@ -123,6 +177,27 @@ choose_criteria <- function(matchingvars = NULL, criteria_list = NULL,
   }
   if (plot_coverage){
   criteriaplot(criteria_results, criteria_list)
+  }
+  } else if (!subset_in_target){
+    criteria_results <- list()
+    areas <- raster::area(raster_template)
+    criteria_results[["totalarea"]] <- round(sum(raster::extract(areas, as.numeric(row.names(matchingvars)))))
+    for (i in 1:length(criteria_list)){
+      # Find matches and calculate matching quality
+      quals <- multivarmatch(matchingvars, subsetcells, criteria = criteria_list[[i]],
+                             matchingvars_id = matchingvars_id,
+                             subsetcells_id = subsetcells_id,
+                             raster_template = raster_template,
+                             matching_distance = matching_distance,
+                             plotraster = FALSE,
+                             subset_in_target = FALSE,
+                             addpoints = FALSE, ...)
+
+      criteria_results[["solution_areas"]][i] <- round(sum(extract(areas,as.numeric(rownames(quals[quals$matching_quality <= matching_distance,])))))
+    }
+    if (plot_coverage){
+      criteriaplot(criteria_results, criteria_list)
+    }
   }
   return(criteria_results)
 }

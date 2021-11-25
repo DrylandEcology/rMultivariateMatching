@@ -14,23 +14,41 @@ knitr::opts_chunk$set(
   eval = FALSE
 )
 ```
+
+
 ## Introduction
 
-This vignette illustrates site selection, matching, and interpolation for a case where the `kpoints` function is used to generate points for simulation. This workflow is appropriate when the goals are 1) to identify sites for simulation from a larger study area and 2) to interpolate simulation results from those selected sites to create high-resolution, continuous maps of the study area. We illustrate the workflow using an example for the state of Wyoming. The code chunks in this document are meant to be run sequentially. Data relevant to this example are contained within the `rMultivariateMatching` package. The site-selection method is described in:  
+This vignette describes a workflow that covers site selection, matching, and interpolation for a case where the `kpoints` function is used to select sites. This workflow is appropriate when the goals are 1) to identify sites for simulation (**subset cells**) from a larger study area (**target cells**) and 2) to interpolate simulation results from the **subset cells** to create high-resolution, continuous maps of the study area. Here, we illustrate the workflow using an example for the state of Wyoming. The code chunks in this document are meant to be run sequentially. Data relevant to this example are contained within the `rMultivariateMatching` package. The site-selection and interpolation methods are described in:  
 
-    Renne, R.R., Schlaepfer, D.R., Palmquist, K.A., Lauenroth, W.K., & Bradford, J.B. In preparation. Estimating complex ecological variables at high resolution in heterogeneous terrain using a multivariate matching algorithm.  
+> Renne, R. R., Schlaepfer, D. R., Palmquist, K. A., Lauenroth, W. K., & Bradford, J. B. In preparation. Estimating complex ecological variables at high resolution in heterogeneous terrain using a multivariate matching algorithm. 
 
-In this vignette, we are assuming that we have already determined appropriate matching variables and matching criteria and have decided on the optimal number of points to represent the study area. To see a worked example of how to use the `rMultivariateMatching` package to determine matching criteria and the optimal number of points, please refer to the vignette 'Selecting points with rMultivariateMatching'. In this example, our Subset cells are selected from the Target cells using `kpoints`. Note that this workflow is distinct from a workflow where the simulated sites (Subset cells) are **not** selected using `kpoints`. A workflow for the latter scenario can be found in the vignette "Matching and interpolation without kpoints".  
+### Examples of the site selection and interpolation methods in print
+
+In the site selection example in *Renne et al.*, our goal was to project the impacts of climate change, wildfire, and lifestock grazing on big sagebrush (*Artemisia tridentata*) plant communities in the western United States using STEPWAT2, an individual-based, gap dynamics plant simulation model (Palmquist, Bradford et al., 2018; Palmquist, Schlaepfer et al., 2018). So, we chose a set of six climate variables that capture the major drivers of plant community structure in drylands as matching variables. We used the site selection interpolation methods described in *Renne et al.* to generate the maps of simulation output for a recent publication investigating the projected impacts of climate change on big sagebrush plant communities:
+
+> Palmquist, K. A., Schlaepfer, D. R., Renne, R. R., Torbit, S. C., Doherty, K. E., Remington, T. E., Watson, G., Bradford, J. B., & Lauenroth, W. K. (2021). Divergent climate change effects on widespread dryland plant communities driven by climatic and ecohydrological gradients. *Glob. Change Bio.*, 27(20), 5169-5185. https://doi.org/10.1111/gcb.15776
+
+Interpolated datasets from the study are available from the US Geological Survey Sciencebase:
+
+> Renne, R. R., Palmquist, K. A., Schlaepfer, D. R., Lauenroth, W. K., and Bradford, J. B. (2021). *High-resolution maps of big sagebrush plant community biomass using multivariate matching algorithms: U.S. Geological Survey data release.* https://doi.org/10.5066/P9MNKWS4.
+
+## Overview and definitions
+
+In this vignette, we assume that we have already determined appropriate **matching variables** and **matching criteria** and have decided on the optimal number of points (`k`) needed to represent the study area. To see a worked example of how to use the `rMultivariateMatching` package to determine **matching criteria** and `k`, please refer to the "Selecting points with rMultivariateMatching" vignette. 
+
+In the example presented here, we start by selecting **subset cells** from the **target cells** using `kpoints`. Note that this workflow is distinct from a workflow where the simulated sites (**subset cells**) are **not** selected using `kpoints`. A workflow for the latter scenario can be found in the "Matching and interpolation without kpoints" vignette. 
+
+The functions in the `rMultivariateMatching` package measure similarity between sites as the Euclidean distance of standardized (i.e., weighted) **matching variables**. Each variable is standardized by dividing it by the maximum amount of difference that would still allow two sites to be considered analogous for that variable. These maximum differences are called the **matching criteria** for each variable. For example, if two sites could be reasonably considered analogous as long as they were within 50 mm of each other for mean annual precipitation (MAP), the matching criteria for MAP could be set to 50 mm. Distances are calculated within the `rMultivariateMatching` function using the `distances` package (Savje 2019).
 
 ### Definitions
 
+* **subset cells** A subset of sites (selected using `kpoints` or determined from some other method) for simulation. Sites are defined geographically as the centroid of the raster cells that they represent.
+* **target cells** All cells across a study area. 
 * **matching variables** A set of variables relevant to the ecosystem and simulation model that are used to determine similarity between sites. Matching variables must be available as rasters covering the entire study area.
-* **matching criteria** Maximum allowable differences for each matching variable such that sites can be considered analogous.
-* **k-points** Site selection algorithm that uses multivariate clustering based on the unsupervised classification scheme, k-means (MacQueen 1967), to find groups of analogous sites across a study area. 
-* **subset cells** A subset of sites (selected using `kpoints` or determined from some other method) for simulation. Sites are defined as the centroid of the raster cells that they represent.
-* **target cells** All cells across a study area.  
+* **matching criteria** Maximum allowable differences between Target and matched Subset cells for each matching variable such that sites can be considered analogous.
+* **kpoints** Site selection algorithm that uses multivariate clustering based on the unsupervised classification scheme, *k-means* (MacQueen 1967), to find groups of analogous sites across a study area. 
 
-The figure below illustrates a conceptual diagram and overview of the site selection and interpolation methods and key terminology. First, a set of “matching variables” are selected and standardized using user-defined matching criteria. Next, the `kpoints` algorithm is used to determine an optimal set of `k` “subset cells” for use in field sampling or simulation. All “target cells” are matched to one of the subset cells (matches are denoted by color in central panel). Point results (e.g., simulation output) for those cells are interpolated across the study area using multivariate matching to produce continuous, high-resolution maps of output, such as plant functional type biomass or ecohydrological variables. 
+The figure below illustrates an overview of the site selection and interpolation methods and key terminology. First, a set of **matching variables** are selected and standardized using user-defined **matching criteria**. Next, the `kpoints` algorithm is used to determine an optimal set of *k* **subset cells** for use in field sampling or simulation. All **target cells** are matched to one of the **subset cells** (matches are denoted by color in central panel). Finally, point results (e.g., simulation output) for the **subset cells** are interpolated across the study area using multivariate matching to produce continuous, high-resolution maps of output, such as plant functional type biomass or ecohydrological variables. 
 
 <img src="Fig_1_added_text_v3.png" width="100%">
 
@@ -40,9 +58,9 @@ The figure below illustrates a conceptual diagram and overview of the site selec
 library(rMultivariateMatching)
 ```
 
-## Prepare inputs and select Subset cells using `kpoints`
+## Prepare inputs and select **subset cells** using `kpoints`
 
-The first step (which you will probably have already completed when determining matching critera and the optimal number of Subset cells), is to use the `makeInputdata` function to convert a rasterStack of matching (and other) variables into the correct format to be used in subsequent functions.
+The first step (which you will probably have already completed when determining matching critera and the optimal number of **subset cells**), is to use the `makeInputdata` function to convert a `rasterStack` (see the `raster` package (Hijmans 2021) for details) of matching (and other) variables into the correct format to be used in subsequent functions.
 
 ```{r}
 # Load targetcells data for Target Cells
@@ -51,31 +69,33 @@ data(targetcells)
 allvars <- makeInputdata(targetcells)
 ```
 
-Next, we run the `kpoints` function to find an optimal set of `k` Subset cells from the Target cells. The `kpoints` function initializes its search for an optimal solution for `k` using a random selection of Target cells and iteratively searches for a solution. Importantly, the solution is likely to vary depending on the initial random selection of cells, and similar to the *kmeans* clustering algorithm, `kpoints` can get "stuck" in a locally optimal solution that falls short of the global optimal solution. What that means in our case, is that running the `kpoints` function with a single random selection of `k` cells is likely to result in a selection of `k` points that does not represent as much of the study area as is possible for that number of points. Thus, to increase the probability that `kpoints` will find a solution that represents as much of the study areas as possible for that value of `k`, we need to try multiple initiations of the algorithm with different random selections of Target cells. This can be achieved by setting `n_start` to a value > 1. The default value is 10 and values <10 will throw a warning (but still run). When you are ready to find the final selection of Subset cells using `kpoints`, you should set `n_starts` to a relatively large number. Setting `n_starts` to 100 should be adequate, and you may choose a higher number if you wish.  
+Next, we run the `kpoints` function to find an optimal set of `k` **subset cells** from the **target cells**. The `kpoints` function initializes its search for an optimal solution for `k` using a random selection of **target cells** and iteratively searches for a solution.  
+
+Importantly, the solution is likely to vary depending on the initial random selection of cells, and similar to the *kmeans* clustering algorithm (MacQueen 1967), `kpoints` can get "stuck" in a locally optimal solution that falls short of the globally optimal solution. What that means in our case, is that running the `kpoints` function with a single random selection of `k` cells (`n_starts` = 1) is likely to result in a selection of `k` points that does not represent as much of the study area as is possible for that number of points. Thus, to increase the probability that `kpoints` will find a solution that represents as much of the study areas as possible for that value of `k`, we need to try multiple initiations of the algorithm with different random selections of **target cells**. This can be achieved by setting `n_starts` argument to a value > 1. The default value is 10 and values <10 will throw a warning (but still run). A reasonable number of starts for testing **matching criteria** and determining the optimal value of `k` would be 10. When you are ready to find the final selection of **subset cells** using `kpoints`, you should set `n_starts` to a relatively large number: `n_starts` = 100 should be adequate, and you may choose a higher number if you wish.  
 
 **Note:** this function may take quite a while to run. Running `kpoints` with `n_starts` = 100 for this example could take 2-3 hours.
 
 ### Explanation of `kpoints` arguments
 
-Here is a brief explanation of each argument in the `kpoints` function below. Please also refer to the `kpoints` documentation.
+Please also refer to the `kpoints` documentation.
 
-* `matchingvars` A data frame representing all Target cells from which a subset of `k` points will be selected. This data frame can be created using the `makeInputdata` function.
+* `matchingvars` A data frame representing all **target cells** from which a subset of `k` points will be selected. This data frame can be created using the `makeInputdata` function.
 
-*`criteria` A vector of matching criteria that correspond to the matching variables. Matching criteria represent the maximum difference allowed for each variable between matched Target and Subset cells.
+* `criteria` A vector of **matching criteria** that correspond to the **matching variables**. Matching criteria represent the maximum difference allowed for each variable between matched **target **and **subset cells**.
 
-* `klist` In this case, this represents `k`, that is, the number of Subset cells we are selecting from the Target cells (200 in this case).
+* `klist` In this case, this represents `k`, that is, the number of **subset cells** we are selecting from the **target cells** (200 in this case).
 
-* `n_starts` The number of random selections of Target cells to use for initializing different runs of the `kpoints` algorithm (as discussed above).
+* `n_starts` The number of random selections of **target cells** to use for initializing different runs of the `kpoints` algorithm (as discussed above).
 
 * `iter` One of the stopping criteria. This is the maximum number of iterations allowed for each initialization of the `kpoints` algorithm. This argument prevents the algorithm from running indefinitely when it fails to converge. Here it is set to 50, the default value.
 
 * `min_area` One of the stopping criteria. If the change in area represented by the `k` points is less than or equal to this value for five consecutive iterations, the `kpoints` algorithm has converged and it will move on to the next random start (or finish if all `n_starts` have been completed). Note that this value represents $km^2$.
 
-* `raster_template` This is one of the rasters used to define the Target cells and it is used as a template to determine the area represented by each iteration and by the solution for each of the `n_starts`. This argument is fundamental to the `kpoints` function because it is designed to optimize based on represented area.
+* `raster_template` This is one of the rasters used to define the **target cells** and it is used as a template to determine the area represented by each iteration and by the solution for each of the `n_starts`. This argument is fundamental to the `kpoints` function because `kpoints` is designed to optimize based on represented area.
 
-* `verify_stop` This is a boolean that indicates whether or not a figure displaying the proportion of the study area represented for each iteration of each random start should be displayed. This argument is used to verify that the stopping criteria are appropriate. Please refer to the 'Selecting poits with rMultivariateMatching' vignette for details. Typically, you will have alreaday verified the stopping criteria by the time you are ready to determine the final selection of Subset cells using the `kpoints` function, and can set this argument to FALSE, but we have set it to TRUE here for reference.
+* `verify_stop` This is a boolean that indicates whether or not a figure displaying the proportion of the study area represented for each iteration of each random start should be displayed. This argument is used to verify that the stopping criteria are appropriate. Please refer to the 'Selecting poits with rMultivariateMatching' vignette for details. Typically, you will have alreaday verified the stopping criteria by the time you are ready to determine the final selection of **subset cells** using the `kpoints` function, and can set this argument to `FALSE`, but we have set it to `TRUE` here for reference.
 
-* `savebest` A boolean indicating whether a CSV of the final selection of Subset cells should be saved to file. We have set it to FALSE here, but in most cases, you will probably want to set it to TRUE to ensure that the final solution is preserved outside of the `R` session. See documentation of `kpoints` for further details.
+* `savebest` A boolean indicating whether a CSV of the final selection of **subset cells** should be saved to file. We have set it to `FALSE` here, but in most cases, you will probably want to set it to `TRUE` to ensure that the final solution is preserved outside of the `R` session. See documentation of `kpoints` for further details.
 
 ```{r}
 # Restrict data to matching variables of interest
@@ -92,17 +112,29 @@ results1 <- kpoints(matchingvars,criteria = criteria,klist = 200,
                     savebest = FALSE)
 ```
 
+<img src="kpoints200_verifystop.png" width="50%">
+
+
+```{r}
+# Calculate coverage of best solution
+results1$solution_areas/results1$totalarea
+```
+
+    k_200   
+    0.9082578
+
+
 ### Explanation of `kpoints` outputs
 
 The output from the `kpoints` function includes:
 
-* `solutions` A data frame of the final solution of `k` Subset cells. Rownames correspond to the cellnumbers, and the 'x' and 'y' coordinates of the cells are included. (This is the data frame that is saved to file if the `savebest` argument is set to TRUE).   
+* `solutions` A data frame of the final solution of `k` **subset cells**. Rownames correspond to the cellnumbers, and the 'x' and 'y' coordinates of the cells are included. (This is the data frame that is saved to file if the `savebest` argument is set to `TRUE`).   
 
-* `solution_areas` The area (in $km^2$) represented by the Subset cells. 
+* `solution_areas` The area (in $km^2$) represented by the **subset cells**. 
 
 * `totalarea` The area of the entire study area (in $km^2$).
 
-* `klist` The number of Subset cells (`k`) selected by the `kpoints` function.
+* `klist` The number of **subset cells** (`k`) selected by the `kpoints` function.
 
 * `iter` This records the value used in the `kpoints` function for finding the solution.
 
@@ -115,35 +147,35 @@ The output from the `kpoints` function includes:
 
 ## Perform matching
 
-Use the `multivarmatch` function to perform multivariate matching. This function will match every Target cell to one of the Subset cells identified using the `kpoints` function in the last step. 
+Use the `multivarmatch` function to perform multivariate matching. This function will match every **target cell** to one of the **subset cells** identified using the `kpoints` function in the last step. 
 
 ### Explanation of `multivarmatch` arguments
 
-Here is a brief explanation of each argument in the `multivarmatch` function below. Please also refer to the `multivarmatch` documentation.
+Please also refer to the `multivarmatch` documentation.
 
-* `matchingvars` A data frame representing all Target cells from which a subset of `k` points will be selected. This data frame can be created using the `makeInputdata` function. (Should be the same as used to in the `kpoints` function above).
+* `matchingvars` A data frame representing all **target cells** from which a subset of `k` points will be selected. This data frame can be created using the `makeInputdata` function. (Should be the same as used to in the `kpoints` function above).
 
 * `subsetcells` A data frame extracted from output from the `kpoints` function.
 
-* `criteria` A vector of matching criteria that correspond to the matching variables. Matching criteria represent the maximum difference allowed for each variable between matched Target and Subset cells. (Should be the same as used in the `kpoints` function above).
+* `criteria` A vector of **matching criteria** that correspond to the **matching variables**. Matching criteria represent the maximum difference allowed for each variable between matched **target** and **subset cells**. (Should be the same as used in the `kpoints` function above).
 
-* `matchingvars_id` The name of the column that contains the unique identifiers for each Target cell. If `matchingvars` is derived from the `makeInputData`, this will be "cellnumbers".
+* `matchingvars_id` The name of the column that contains the unique identifiers for each **target cell**. If `matchingvars` is derived from the `makeInputData`, this will be "cellnumbers".
 
-* `addpoints` A boolean indicating whether the Subset cells should be added to the map of matching quality.
+* `addpoints` A boolean indicating whether the **subset cells** should be added to the map of matching quality.
 
-* `raster_template` This is one of the rasters used to define the Target cells and it is used as a template for creating a raster of matching quality.
+* `raster_template` This is one of the rasters used to define the **target cells** and it is used as a template for creating a raster of matching quality.
 
-* `subset_in_target` A boolean indicating if the Subset cells are taken from within the Target cells. When the `kpoints` function is used to select the Subset cells, this will be TRUE (as is the case in this example).
+* `subset_in_target` A boolean indicating if the **subset cells** are taken from within the **target cells**. When the `kpoints` function is used to select the **subset cells**, this will be `TRUE` (as is the case in this example).
 
 **Note:** the function below does not specify several additional arguments that are left as default values. These include:
 
-* `saveraster` A boolean indicating if a raster of matching quality should be saved to file. (Defaults to FALSE).
+* `saveraster` A boolean indicating if a raster of matching quality should be saved to file. (Defaults to `FALSE`).
 
-* `plotraster` A boolean indicating if a raster of matching quality should be plotted. (Defaults to TRUE).
+* `plotraster` A boolean indicating if a raster of matching quality should be plotted. (Defaults to `TRUE`).
 
-* `filepath` A destination for a raster of matching quality in the case where `saveraster` = TRUE. (Defaults to working directory).
+* `filepath` A destination for a raster of matching quality in the case where `saveraster` = `TRUE`. (Defaults to working directory).
 
-* `overwrite` A boolean indicating if the `raster::writeRaster` function is allowed to overwrite existing files. (Defaults to FALSE).
+* `overwrite` A boolean indicating if the `raster::writeRaster` function is allowed to overwrite existing files. (Defaults to `FALSE`).
 
 
 ```{r}
@@ -161,15 +193,15 @@ quals <- multivarmatch(matchingvars, subsetcells, criteria = criteria,
 
 ### Explanation of `multivarmatch` outputs
 
-The output from the `multivarmatch` function is a data frame of Target cells with coordinates ('x','y'), cellnumber of Target cell ('target_cell'), unique id of matched Subset cell ('subset_cell') and matching quality ('matching_quality'). The function will save a raster of matching quality if `saveraster` is TRUE and plot a map of matching quality if `plotraster` is TRUE.
+The output from the `multivarmatch` function is a data frame of **target cells** with coordinates ('x','y'), cellnumber of each **target cell** ('target_cell'), unique id of matched the **subset cell** ('subset_cell'), and matching quality ('matching_quality'). The function will save a raster of matching quality if `saveraster` is `TRUE` and plot a map of matching quality if `plotraster` is `TRUE`.
 
 ## Evaluate matching
 
-Now that you have your final selection of `k` Subset cells, you should evaluate the success of matching. In Renne et al., we suggest four methods of evaluating matching.
+Now that we have our final selection of `k` **subset cells**, we should evaluate the success of matching. In *Renne et al.*, we suggest four methods of evaluating matching.
 
-1. Calculate matching quality (weighted Euclidean distance between Target and matched Subset cells)
+1. Calculate matching quality (weighted Euclidean distance between **target **and matched **subset cells**)
 
-2. Calculate the standard deviation of differences between Target and matched Subset cells for a set of variables relevant to the project
+2. Calculate the standard deviation of differences between **target **and matched **subset cells** for a set of variables relevant to the project
 
 3. Calculate geographic distances between matched cells
 
@@ -179,29 +211,31 @@ Now that you have your final selection of `k` Subset cells, you should evaluate 
 
 ### 1. Calculate matching quality
 
-In addition to identifying the matching Subset cell for each Target cell, the `multivarmatch` function also calculates the weighted Euclidean distance between matched cells, which can be interpreted as a continuous variable measuring matching quality. Distances less than or equal to one indicate high-quality matching (matching criteria have been met for all variables). Distances greater than one indicate that the difference between these Target cells and their matched Subset cell exceeds the matching criterion for one or more variables.  
+In addition to identifying the matching **subset cell** for each **target cell**, the `multivarmatch` function also calculates the weighted Euclidean distance between matched cells, which can be interpreted as a continuous variable measuring matching quality. Distances less than or equal to one indicate high-quality matching (**matching criteria** have been met for all variables). Distances greater than one indicate that the difference between these **target cells** and their matched **subset cell** exceeds the **matching criterion** for one or more variables.  
 
-Matching quality can be used to exclude target cells for which there is insufficient matching, i.e., no simulated site is analogous, and to determine the spatial extent of the represented area. 
+Matching quality can be used to exclude **target cells** for which there is insufficient matching, i.e., no simulated site is analogous, and to determine the spatial extent of the represented area. In *Renne et al.*, we used a cut-off of 1.5 as a threshold between high/moderate quality and low quality matching, and excluded sites with matching quality >1.5 from the final interpolated datasets.
 
 
 
-### 2. Calculate standard deviation of differences between Target and matched Subset cells
+### 2. Calculate standard deviation of differences between **target** and matched **subset cells**
 
-Matching can also be evaluated by using the `evaluateMatching` function to calculate the standard deviation of differences between Target and Subset cells for a set of variables relevant to the project. This provides an estimate of how much variability there is among the Target cells matched to each Subset cell and is particularly informative if the variables were not used as part of the matching process. 
+Matching can also be evaluated by using the `evaluateMatching` function to calculate the standard deviation of differences between **target **and **subset cells** for a set of variables relevant to the project. This provides an estimate of how much variability there is among the **target cells** matched to each **subset cell** and is particularly informative if the variables were not used as part of the matching process. 
 
-Here we use 19 bioclim variables (six of which were used as matching variables) to evaluate matching in the current example.  
+Here we use 19 bioclim variables (six of which were used as **matching variables**) to evaluate matching in the current example.  
 
 ### Explanation of `evaluateMatching` arguments
 
-* `allvars` A data frame generated using `makeInputdata` where column 1 and rownames are 'cellnumbers', columns 2 and 3 correspond to x and y coordinates, and additional columns correspond to various variables (which can include matching variables). When `subset_in_target` is TRUE, these data represent both Target and Subset cells.
+Please also refer to the `evaluateMatching` documentation.
+
+* `allvars` A data frame generated using `makeInputdata` where column 1 and rownames are 'cellnumbers', columns 2 and 3 correspond to 'x' and 'y' coordinates, and additional columns correspond to various variables (which can include **matching variables**). When `subset_in_target` is `TRUE`, these data represent both **target **and **subset cells**.
 
 * `matches` A data frame output from the `multivarmatch` function.
 
-* `matchingvars_id` The name of the column that contains the unique identifiers for each Target cell. If `matchingvars` is derived from the `makeInputData`, this will be "cellnumbers"
+* `matchingvars_id` The name of the column that contains the unique identifiers for each **target cell**. If `matchingvars` is derived from the `makeInputData`, this will be "cellnumbers"
 
-* `subset_in_target` A boolean indicating if the Subset cells are taken from within the Target cells. When the `kpoints` function is used to select the Subset cells, this will be TRUE (as is the case in this example). 
+* `subset_in_target` A boolean indicating if the **subset cells** are taken from within the **target cells**. When the `kpoints` function is used to select the **subset cells**, this will be `TRUE` (as is the case in this example). 
 
-* `matching_distance` The maximum allowable weighted Euclidean distance between Target and Subset cells such that the matched cells can be considered analogous. (Set to 1.5 as described in Renne et al.).
+* `matching_distance` The maximum allowable weighted Euclidean distance between **target **and **subset cells** such that the matched cells can be considered analogous. (Set to 1.5 as described in Renne et al.).
 
 * `plot_diffs` A boolean indicating whether a bar plot of the standard deviation of differernces for each variable should be plotted.
 
@@ -217,38 +251,40 @@ sddiffs <- evaluateMatching(allvars = allvars, matches = quals,
 
 ### Explanation of `evaluateMatching` outputs
 
-Data frame of the standard deviation of differences between Target and their matched Subset cells for all variables supplied in `allvars` data frame. The first row corresponds to the standard deviation of differences between Target and Subset cells for all cells and the second row corresponds to the standard deviation of differences between Target and Subset cells for only those Target cells with matching quality <= `matching_distance`. Units are the same as the units for each variable in `allvars`.  
+A data frame of the standard deviation of differences between **target** and matched **subset cells** for all variables supplied in `allvars` data frame. The first row corresponds to the standard deviation of differences between **target **and **subset cells** for all cells and the second row corresponds to the standard deviation of differences between **target **and **subset cells** for only those **target cells** with matching quality $\le$ `matching_distance`. Units are the same as the units for each variable in `allvars`.  
 
 
 ### 3. Calculate geographic distances between matched cells
 
-Importantly, the quality of matching will also depend on the extent to which spatio-temporal patterns are maintained between matched cells. Our methods do not explicitly incorporate geographic proximity. Thus, Target cells may be matched to geographically distant Subset cells and simulation output from Subset cells that are geographically distant may be assigned to adjacent Target cells.   
+Importantly, the quality of matching will also depend on the extent to which spatio-temporal patterns are maintained between matched cells. Our methods do not explicitly incorporate geographic proximity. Thus, **target cells** may be matched to geographically distant **subset cells** and simulation output from **subset cells** that are geographically distant may be assigned to adjacent **target cells**.   
 
-Although these cells may be well matched using the matching variables, they may exhibit daily patterns (e.g., precipitation, soil moisture) that are much less similar than would be expected for adjacent cells. To estimate the extent to which spatio-temporal patterns may have been maintained during matching, two measures of distance can be calculated using the `evaluateGeoDist` function:  
+Although these cells may be well matched using the **matching variables**, they may exhibit daily patterns (e.g., precipitation, soil moisture) that are much less similar than would be expected for adjacent cells. To estimate the extent to which spatio-temporal patterns may have been maintained during matching, two measures of distance can be calculated using the `evaluateGeoDist` function:  
 
-1. The distance between Target cells and their matched Subset cells
+1. The distance between **target cells** and their matched **subset cells**
 
-2. The average distance between the Subset cell that is matched to a given Target cell and the Subset cells that are matched to the eight adjacent neighbors of that Target cell. 
+2. The average distance between the **subset cell** that is matched to a given **target cell** and the **subset cells** that are matched to the eight adjacent neighbors of that **target cell**. 
 
 ### Explanation of `evaluateGeoDist` arguments
 
+Please also refer to the `evaluateGeoDist` documentation.
+
 * `matches` A data frame output from the `multivarmatch` function.
 
-* `subsetcells` * `subsetcells` A data frame extracted from output from the `kpoints` function.
+* `subsetcells` A data frame extracted from output from the `kpoints` function.
 
-* `subset_in_target` A boolean indicating if the Subset cells are taken from within the Target cells. When the `kpoints` function is used to select the Subset cells, this will be TRUE (as is the case in this example).
+* `subset_in_target` A boolean indicating if the **subset cells** are taken from within the **target cells**. When the `kpoints` function is used to select the **subset cells**, this will be `TRUE` (as is the case in this example).
 
-* `exclude_poor_matches` A boolean indicating if Target cells with poor matching quality (weighted Euclidean distance between Target and matched Subset cell is greater than `matching_distance`) should be excluded from calculations.  
+* `exclude_poor_matches` A boolean indicating if **target cells** with poor matching quality (weighted Euclidean distance between **target **and matched **subset cell** is greater than `matching_distance`) should be excluded from calculations.  
 
-* `matching_distance` The maximum allowable weighted Euclidean distance between Target and Subset cells such that the matched cells can be considered analogous. (Set to 1.5 as described in Renne et al.).
+* `matching_distance` The maximum allowable weighted Euclidean distance between **target **and **subset cells** such that the matched cells can be considered analogous. (Set to 1.5 as described in *Renne et al.*).
 
-* `longlat` A boolean to pass to an internal function. Indicates if the coordinates are in longitude and latitude format for calculating distances between points. Default value is TRUE and coordinates must be provided in this format.
+* `longlat` A boolean to pass to an internal function. Indicates if the coordinates are in longitude and latitude format for calculating distances between points. Default value is `TRUE` and coordinates must be provided in this format.
 
-* `raster_template` This is one of the rasters used to define the Target cells and it is used as a template for creating a raster of distance.
+* `raster_template` This is one of the rasters used to define the **target cells** and it is used as a template for creating rasters of distances.
 
-* `map_distances` A boolean indicating whether to plot a map of distances between Target and matched Subset cells.
+* `map_distances` A boolean indicating whether to plot a map of distances between **target **and matched **subset cells**.
 
-* `map_neighbor_distances` A boolean indicating whether to plot a map of the average distance between the Subset cell matched to each Target cell and the Subset cells matched to the eight adjacent neighbors.
+* `map_neighbor_distances` A boolean indicating whether to plot a map of the average distance between the **subset cell** matched to each **target cell** and the **subset cells** matched to the eight adjacent neighbors of that cell.
 
 * `which_distance` A character indicating that both measures of distance should be calculated. See description for other options.
 
@@ -264,58 +300,33 @@ geodist <- evaluateGeoDist(matches = quals, subsetcells = subsetcells,
                            which_distance = "both",saverasters = FALSE)
 ```
 
-*Distance (km) between Target and matched Subset cells.*
+*Distance (km) between* **target** *and* *matched* **subset cells***.*
 
 <img src="geodistance_withkpoints.png" width="50%">
 
 
 
-*Average distance between the Subset cell that is matched to a given Target cell and the Subset cells that are matched to the eight adjacent neighbors of that Target cell.*
+*Average distance between the* **subset cell** *that is matched to a given* **target cell** *and the* **subset cells** *that are matched to the eight adjacent neighbors of that* **target cell***.*
 
 <img src="neighbordist_withkpoints.png" width="50%">
 
 
 ### Explanation of `evaluateGeoDist` outputs
 
-Data frame with the distance between Target and matched Subset cells ('target_to_subset_distance') and the average distance between the Subset cell matched to each Target cell and the Subset cells matched to the eight adjacent Target cells ('avgdistance_to_neighbors'). The first column and the rownames correspond to the unique identifiers for the Target cells, and columns 2 and 3 correspond to the 'x' and 'y' coordinates of the Target cells.
+Data frame with the distance between **target **and matched **subset cells** ('target_to_subset_distance') and the average distance between the **subset cell** matched to each **target cell** and the **subset cells** matched to the eight adjacent **target cells** ('avgdistance_to_neighbors'). The first column and the rownames correspond to the unique identifiers for the **target cells**, and columns 2 and 3 correspond to the 'x' and 'y' coordinates of the **target cells**.
 
 
 
 ### 4. Leave-one-out cross-validation
 
-Once simulations are complete for the Subset cells, interpolation errors can calculated be estimated using leave-one-out cross validation (LOOCV) with the `loocv` function. In LOOCV, each Subset cell is matched to its nearest neighbor from among the remaining Subset cells (using Euclidean distance of the weighted matching variables). Then, an estimate of the interpolation error can be calculated using the following equation:
+Once simulations are complete for the **subset cells**, interpolation errors can calculated be estimated using leave-one-out cross validation (LOOCV) with the `loocv` function. In LOOCV, each **subset cell** is matched to its nearest neighbor from among the remaining **subset cells** (using Euclidean distance of the weighted **matching variables**). Then, an estimate of the interpolation error can be calculated using the following equation:
 
 $$CVerror=\sqrt{\frac{1}k*∑_{i=1}^{k}(y_i-\hat y_i)^2}$$
 
-Where $k$ is the number of Subset cells, $y$ is the value of the simulated output variable, and $\hat y$ is the value of the matched output variable.
+Where $k$ is the number of **subset cells**, $y$ is the value of the simulated output variable, and $\hat y$ is the value of the matched output variable.  
 
-**Functionality is still in development when `subset_in_target` = TRUE.**
 
-## Interpolate output variables
-
-Finally, the `iterpolatePoints` function can be used to interpolate results from simulated Subset cells to all Target cells across the study area by assigning simulation results from the Subset cells to their matched Target cells.  
-
-For our example here, we do not have simulation output corresponding to the Subset cells we selected above using the `kpoints` function, so we will create a mock set out output results to illustrate the `interpolatePoints` when `subset_in_target` is TRUE.
-
-### Explanation of `interpolatePoints` arguments
-
-* `matches` A data frame output from the `multivarmatch` function.
-
-* `output_results` A data frame containing simulation output results for all simulated sites (Subset cells). The first column and the rownames should correspond to the unique identifiers for the Subsetcells. Importantly, these identifiers need to match the identifiers in the 'subset_cell' column of the 'matches' data frame. 
-
-* `exclude_poor_matches` A boolean indicating if Target cells with poor matching quality (weighted Euclidean distance between Target and matched Subset cell is greater than `matching_distance`) should be excluded from calculations.  
-
-* `subset_cell_names` The name of the column in the 'matches' data frame that contains the unique identifiers for the Subset cells matched to each Target cell.
-
-* `matching_quality_name` The name of the column in the 'matches' data frame that contains the matching quality for the Subset cells matched to each Target cell.
-
-* `matching_distance` The maximum allowable weighted Euclidean distance between Target and Subset cells such that the matched cells can be considered analogous. (Set to 1.5 as described in Renne et al.).
-
-* `raster_template` This is one of the rasters used to define the Target cells and it is used as a template for creating interpolated output variables.
-
-* `plotraster`  A boolean indicating if a raster of matching quality should be plotted. (Defaults to TRUE).
-
-* `overwrite` A boolean indicating if the `raster::writeRaster` function is allowed to overwrite existing files. (Defaults to FALSE).
+For our example here, we do not have simulation output corresponding to the **subset cells** we selected above using the `kpoints` function, so we will create a mock set of output results to illustrate the `loocv` function here.
 
 
 ```{r}
@@ -323,7 +334,111 @@ For our example here, we do not have simulation output corresponding to the Subs
 output_results <- allvars[rownames(subsetcells),c("cellnumbers","bioclim_02",
                                             "bioclim_03","bioclim_16",
                                             "bioclim_17")]
+```
 
+### Explanation of `loocv` arguments
+
+Please also refer to the `interpolatePoints` documentation.
+
+* `matchingvars` A data frame that includes all **matching variables** for the **subset cells**. Rownames should correspond to the unique identifiers for each **subset cell**. The first two columns correspond to 'x' and 'y' coordinates of the **subset cells** (if none exist, use "NA"). The rest of the columns correspond to the **matching variables**.
+
+* `output_results` A data frame of simulation output results for all simulated sites (**subset cells**). The first column and the rownames should correspond to the unique identifiers for the **subset cells**, and must match the rownames in 'matchingvars' exactly.
+
+* `criteria1` A vector of **matching criteria** that correspond to the **matching variables**. Matching criteria represent the maximum difference allowed for each variable between matched **target **and **subset cells**, and should be the same criteria used in `kpoints` and other functions above.
+
+* `secondarymatch` A boolean indicating if a secondary matching step should be completed. We only used one step of matching in this example, so it is set to `FALSE`.
+
+* `n_neighbors` The number of nearest neighbors to search for among the **subset cells**. To achieve leave-one-out cross-validation, this number must be set to 2. The nearest neighbor of each **subset cells** is itself, so the second nearest neighbor will correspond the closest non-self neighbor.
+
+```{r}
+# Create dataset of matchingvars for subsetcells
+subset_matchingvars <- matchingvars[rownames(subsetcells),-1]
+
+# Run leave-one-out cross validation of mock output results
+loocv_results <- loocv(matchingvars = subset_matchingvars, 
+                       output_results = output_results,
+                       criteria1 = criteria,
+                       secondarymatch = FALSE, n_neighbors = 2,
+                       subset_in_target = TRUE)
+```
+
+
+### Explanation of `loocv` outputs
+
+The output from the `loocv` function is a data frame of cross-validated matching, with coordinates ('x','y') and cellnumber of each **subset cell** ('target_cell'), unique id of matched non-self **subset cell** ('subset_cell') and matching quality ('matching_quality'). Subsequent columns give the difference between simulated output values and the matched output values for each cell.
+
+The `loocv` function output can be used to visualize the distribution of the matching errors.
+
+```{r}
+# Visualize distribution of matching errors
+par(mfrow = c(2,2), mar = c(2,2,2,1), mgp = c(1,0.2,0), tcl = 0.2)
+for (i in 6:9){
+  hist(loocv_results[,i], breaks = 30,
+       main = paste0("Matching errors: ", 
+                     gsub("_diff","",names(loocv_results)[i])),
+       xlab = "Simulated - Matched")
+  abline(h = 0)
+  legend("topright", 
+         legend = c(paste0("cv-error = ", 
+                           round(sqrt(mean(loocv_results[,i]^2)),2)),
+                  paste0("mean = ", round(mean(loocv_results[,i]),2))),
+         cex = 0.7, bty= "n", y.intersp = 0.7, x.intersp = 0.7)
+                
+  box()
+}
+```
+
+<img src="cverrors_withkpoints.png" width="80%">
+
+
+### Calculate matching errors
+
+Finally, matching errors for each output variable can be estimated from the output of `loocv` using the `cverrors` function.
+
+### Explanation of `cverrors` arguments
+
+* `loocv_output` Output from `loocv` function.
+
+* `first_output_column` The column number in the `loocv_output` data frame that corresponds to the first column of output variables (after the various columns that provide information on matching).
+
+```{r}
+# Estimate matching errors for each output variable
+est_errors <- cverrors(loocv_output = loocv_results, 
+                       first_output_column = 6)
+```
+
+    bioclim_02 bioclim_03 bioclim_16 bioclim_17 
+     0.7747073  1.2122000 16.9545430 10.3164451
+## Interpolate output variables
+
+Finally, the `iterpolatePoints` function can be used to interpolate results from simulated **subset cells** to all **target cells** across the study area by assigning simulation results from the **subset cells** to their matched **target cells**.  
+
+For our example here, we do not have simulation output corresponding to the **subset cells** we selected above using the `kpoints` function, so we will again use our mock set of output results to illustrate the `interpolatePoints` when `subset_in_target` is `TRUE`.
+
+### Explanation of `interpolatePoints` arguments
+
+Please also refer to the `interpolatePoints` documentation.
+
+* `matches` A data frame output from the `multivarmatch` function.
+
+* `output_results` A data frame containing simulation output results for all simulated sites (**subset cells**). The first column and the rownames should correspond to the unique identifiers for the **subset cells**. Importantly, these identifiers need to match the identifiers in the 'subset_cell' column of the 'matches' data frame. 
+
+* `exclude_poor_matches` A boolean indicating if **target cells** with poor matching quality (weighted Euclidean distance between **target **and matched **subset cell** is greater than `matching_distance`) should be excluded from calculations.  
+
+* `subset_cell_names` The name of the column in the 'matches' data frame that contains the unique identifiers for the **subset cells** matched to each **target cell**.
+
+* `matching_quality_name` The name of the column in the 'matches' data frame that contains the matching quality for the **subset cells** matched to each **target cell**.
+
+* `matching_distance` The maximum allowable weighted Euclidean distance between **target **and **subset cells** such that the matched cells can be considered analogous. (Set to 1.5 as described in Renne et al.).
+
+* `raster_template` This is one of the rasters used to define the **target cells** and it is used as a template for creating interpolated output variables.
+
+* `plotraster`  A boolean indicating if a raster of matching quality should be plotted. (Defaults to `TRUE`).
+
+* `overwrite` A boolean indicating if the `raster::writeRaster` function is allowed to overwrite existing files. (Defaults to `FALSE`).
+
+
+```{r}
 # Interpolate simulation output to rasters
 interpolatePoints(matches = quals, output_results = output_results,
                   exclude_poor_matches = TRUE,
@@ -355,3 +470,11 @@ interpolatePoints(matches = quals, output_results = output_results,
 *Interpolated output of bioclim_17.*
 
 <img src="interpolatedoutput_bioclim_17.png" width="50%">
+
+## References
+
+Hijmans, R. J. (2021). raster: Geographic Data Analysis and Modeling. R package version 3.4-13. https://CRAN.R-project.org/package=raster
+
+MacQueen, J. (1967). Some methods for classification and analysis of multivariate observations. In Le Cam, L. M., & Neyman, J. (Eds.), *Proceedings of the Fifth Berkeley Symposium on Mathematical Statistics and Probability*. (Vol. 1, No. 14, pp. 281-297). University of California Press.  
+
+Savje, F. (2019). distances: Tools for Distance Metrics. R package version 0.1.8. https://CRAN.R-project.org/package=distances

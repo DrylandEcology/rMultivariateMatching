@@ -29,7 +29,7 @@
 #' to "cellnumbers", which is the unique ID column created by \code{\link{makeInputdata}}.
 #'
 #' @param subsetcells_id character or numeric. Refers to the column in
-#' `subsetcells`that provides the unique identifiers for Target cells. Defaults
+#' `subsetcells`that provides the unique identifiers for Subset cells. Defaults
 #' to NULL.
 #'
 #' @param criteria single value or vector of length equal to the number of matching variables,
@@ -66,37 +66,49 @@
 #' @examples
 #' # Load targetcells data for Target Cells
 #' data(targetcells)
+#'
 #' Create data frame of potential matching variables for Target Cells
 #' allvars <- makeInputdata(targetcells)
+#'
 #' # Restrict data to matching variables of interest
 #' matchingvars <- allvars[,c("cellnumbers","x","y","bioclim_01","bioclim_04",
 #' "bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+#'
 #' # Create vector of matching criteria
 #' criteria <- c(0.7,42,3.3,66,5.4,18.4)
+#'
 #' # Find solution for k = 200
+#' # Note: n_starts should be >= 10, it is 1 here to reduce run time.
 #' results1 <- kpoints(matchingvars,criteria = criteria,klist = 200,
 #' n_starts = 1,min_area = 50,iter = 50,raster_template = targetcells[[1]])
 #'
-#' # For example with subset_in_target = TRUE
+#' ###################################
+#' # First an example where subset_in_target = TRUE
 #' # Get points from solution to kpoints algorithm
 #' subsetcells <- results1$solutions[[1]]
+#'
 #' # Find matches and calculate matching quality
 #' quals <- multivarmatch(matchingvars, subsetcells, criteria = criteria,
 #'                         matchingvars_id = "cellnumbers", addpoints = FALSE,
 #'                         raster_template = targetcells[[1]],
 #'                         subset_in_target = TRUE)
 #'
-#' # For example with subset_in_target = FALSE
-#' # Get points from solution to kpoints algorithm
+#' ###################################
+#' # Now an example where subset_in_target is FALSE
+#' # Get Subset cells data
 #' data(subsetcells)
+#'
 #' # Remove duplicates (representing cells with same climate but different soils--
 #' # we want to match on climate only)
 #' subsetcells <- subsetcells[!duplicated(subsetcells$site_id),]
+#'
 #' # Pull out matching variables only, with site_id that identifies unique climate
 #' subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84",
 #' names(matchingvars)[4:9])]
+#'
 #' # Ensure that site_id will be values unique to subsetcells
 #' subsetcells$site_id <- paste0("00",subsetcells$site_id)
+#'
 #' # Find matches and calculate matching quality
 #' quals <- multivarmatch(matchingvars, subsetcells, criteria = criteria,
 #'                          matchingvars_id = "cellnumbers",
@@ -198,6 +210,9 @@ multivarmatch <- function(matchingvars,subsetcells,matchingvars_id = "cellnumber
                      subset_cell = neighbors2, matching_quality = sqrt(sum6))
   rownames(qual) <- rownames(stdvars)
 
+  # Change subset_cells back to numeric
+  qual$subset_cell <- as.character(as.numeric(qual$subset_cell))
+
   # Limit qual to just target cells (we don't need subset cells included if subset_in_target is FALSE)
   qual <- qual[1:nrow(matchingvars),]
 
@@ -290,51 +305,75 @@ multivarmatch <- function(matchingvars,subsetcells,matchingvars_id = "cellnumber
 #' @examples
 #' # Load targetcells data for Target Cells (from rMultivariateMatchingAlgorithms package)
 #' data(targetcells)
+#'
 #' # Create data frame of potential matching variables for Target Cells
 #' allvars <- makeInputdata(targetcells)
+#'
 #' # Subset to include only matching variables
 #' matchingvars <- allvars[,c("cellnumbers","x","y","bioclim_01","bioclim_04",
 #' "bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+#'
 #' # Create vector of matching criteria
 #' criteria <- c(0.7,42,3.3,66,5.4,18.4)
-#  # Find solution for k = 200
-#' results1 <- kpoints(matchingvars,criteria = criteria,klist = 200,n_starts = 1,min_area = 50,iter = 50,raster_template = targetcells[[1]])
 #'
-#' # For an example where subset_in_target is TRUE
+#' # Find solution for k = 200
+#' # Note: n_starts should be >= 10, it is 1 here to reduce run time.
+#' results1 <- kpoints(matchingvars,criteria = criteria,
+#' klist = 200,n_starts = 1,min_area = 50,iter = 50,
+#' raster_template = targetcells[[1]])
+#'
+#'
+#' ###################################
+#' # First an example where subset_in_target = TRUE
 #' # Get points from solution to kpoints algorithm
 #' subsetcells <- results1$solutions[[1]]
+#'
 #' # Find matches and calculate matching quality
-#' quals <- multivarmatch(matchingvars, subsetcells, matchingvars_id = "cellnumbers", raster_template = targetcells[[1]], subset_in_target = TRUE)
+#' quals <- multivarmatch(matchingvars, subsetcells,
+#' matchingvars_id = "cellnumbers", raster_template = targetcells[[1]],
+#' subset_in_target = TRUE)
+#'
 #' # Run evaluateMatching
 #' sddiffs <- evaluateMatching(allvars = allvars, matches = quals,
 #'                             matchingvars_id = "cellnumbers",
 #'                             subset_in_target = TRUE, matching_distance = 1.5,
 #'                             plot_diffs = TRUE)
 #'
-#'
-#' # For example with subset_in_target = FALSE
+#' ###################################
+#' # Now an example where subset_in_target is FALSE
 #' # Get points from solution to kpoints algorithm
 #' data(subsetcells)
-#' # Remove duplicates (representing cells with same climate but different soils--
-#' # we want to match on climate only)
+#'
+#' # Remove duplicates (representing cells with same climate but different
+#' soils--we want to match on climate only)
 #' subsetcells <- subsetcells[!duplicated(subsetcells$site_id),]
+#'
 #' # Pull out matching variables only, with site_id that identifies unique climate
 #' subsetcells1 <- subsetcells[,c("site_id","X_WGS84","Y_WGS84",names(matchingvars)[4:9])]
+#'
 #' # Ensure that site_id will be values unique to subsetcells
 #' subsetcells1$site_id <- paste0("00",subsetcells$site_id)
+#'
 #' # Find matches and calculate matching quality
 #' quals <- multivarmatch(matchingvars, subsetcells=subsetcells1, matchingvars_id = "cellnumbers",subsetcells_id = "site_id",
 #'                          raster_templat = targetcells[[1]], subset_in_target = FALSE)
+#'
 #' # Get all variables for Subset cells now:
-#' subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84",names(allvars)[4:22])]
+#' subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84",
+#' names(allvars)[4:22])]
 #'
 #' # Run evaluateMatching
-#' sddiffs <- evaluateMatching(allvars = allvars[,c(1:22)], matches = quals,
-#'                             matchingvars_id = "cellnumbers", subsetcells_id = "site_id",
+#' sddiffs <- evaluateMatching(allvars = allvars[,c(1:22)],
+#'                             subsetcells = subsetcells,
+#'                             matches = quals,
+#'                             matchingvars_id = "cellnumbers",
+#'                             subsetcells_id = "site_id",
 #'                             subset_in_target = FALSE, matching_distance = 1.5,
 #'                             plot_diffs = TRUE)
 
-evaluateMatching <- function(allvars = NULL, matches = NULL,matchingvars_id = "cellnumbers",
+evaluateMatching <- function(allvars = NULL, subsetcells = NULL,
+                             matches = NULL,
+                             matchingvars_id = "cellnumbers",
                              subsetcells_id = NULL,subset_in_target = TRUE,
                              matching_distance = 1.5, plot_diffs = TRUE){
   if (is.null(allvars) | is.null(matches)){
@@ -351,6 +390,9 @@ evaluateMatching <- function(allvars = NULL, matches = NULL,matchingvars_id = "c
   if (sum(names(matches) != c("x","y","target_cell","subset_cell","matching_quality")) > 0){
     stop("Verify inputs: 'matches' object has unexpected column names.")
   }
+  if (sum(rownames(allvars)==rownames(matches)) < nrow(allvars)){
+    stop("Verify innputs: rownames of 'allvars' and 'matches' do not match.")
+  }
 
   # Create new allvars dataframe with matches column
   allvars1 <- cbind(allvars,subset_cell = as.numeric(matches[allvars$cellnumbers == matches$target_cell,]$subset_cell))
@@ -365,41 +407,62 @@ evaluateMatching <- function(allvars = NULL, matches = NULL,matchingvars_id = "c
   # Calculate SD of diffs for all and/or for matched cells:
   if (subset_in_target){
   for (i in 4:(ncol(allvars1)-1)){
-    results[1,i-3] <- sd(allvars1[as.character(allvars1[,ncol(allvars1)]),i]-allvars1[,i])
-    results[2,i-3] <- sd(matchedonly[as.character(matchedonly[,ncol(matchedonly)]),i]-matchedonly[,i])
+    results[1,i-3] <- sd(allvars1[as.character(allvars1[,ncol(allvars1)]),i]-allvars1[,i], na.rm = T)
+    results[2,i-3] <- sd(matchedonly[as.character(matchedonly[,ncol(matchedonly)]),i]-matchedonly[,i], na.rm = T)
     }
   }else if (!subset_in_target){
     rownames(subsetcells) <- subsetcells[,subsetcells_id]
     for (i in 4:(ncol(allvars1)-1)){
-    results[1,i-3] <- sd(subsetcells[as.character(allvars1[,ncol(allvars1)]),colnames(allvars1)[i]]-allvars1[,i])
-    results[2,i-3] <- sd(subsetcells[as.character(matchedonly[,ncol(matchedonly)]),colnames(allvars1)[i]]-matchedonly[,i])
+    results[1,i-3] <- sd(subsetcells[as.character(allvars1[,ncol(allvars1)]),colnames(allvars1)[i]]-allvars1[,i], na.rm = T)
+    results[2,i-3] <- sd(subsetcells[as.character(matchedonly[,ncol(matchedonly)]),colnames(allvars1)[i]]-matchedonly[,i], na.rm = T)
     }
   }
   # Remove any columns with all NAs
-  rmvec <- vector()
+  rmvec <- NA
   for (i in 1:ncol(results)){
     if (sum(is.na(results[,i])) == nrow(results)){
       rmvec <- append(rmvec,i)
     }
   }
+  if (!is.na(rmvec[1])){
   results <- results[,-rmvec]
+  }
   # Plot if desired
   if (plot_diffs){
-  # Create barplot showing standard deviation of differences between Target and Subset cells
-  par(mar = c(2,max(nchar(names(results)))/3,2,1), mgp = c(1.5,0.2,0), tcl = 0.3,
-      lwd =1, mfrow = c(1,1))
-  barplot(as.matrix(results[,ncol(results):1]), beside = T, horiz = T, col = rep(c("grey",0),19),
-          names.arg = rev(colnames(results)), las = 1, cex.names = 0.7,
-          main = "Standard deviation of differences", xlim = c(0,max(as.matrix(results), na.rm = TRUE)*1.1))
-  legend("bottomright", legend = c("Matched only","All cells"), fill= c(0,"grey"), bty = "n")
-  box()
+  sd_barplot(results)
   }
   return(results)
   }
 
 
 
+#' Internal function for \code{\link{evaluateMatching}}
+#'
+#' Plots a horizontal barplot of output from \code{\link{evaluateMatching}}
+#'
+#'
+#' @param results data frame. Output from \code{\link{evaluateMatching}}
+#'
+#'
+#' @return a horizonal barplot of the standard deviation of differences between
+#' target and matched subset cells.
+#'
+#'
+#' @examples
+#'sd_barplot(results)
 
+sd_barplot <- function(results){
+  # Calculate xmax_val
+  xmax_val <- max(results, na.rm = T)*1.1
+  # Create barplot showing standard deviation of differences between Target and Subset cells
+  par(mar = c(2,max(nchar(names(results)))/3,2,1), mgp = c(1.5,0.2,0), tcl = 0.3,
+      lwd =1, mfrow = c(1,1))
+  barplot(as.matrix(results[,ncol(results):1]), beside = T, horiz = T, col = rep(c("grey",0),19),
+          names.arg = rev(colnames(results)), las = 1, cex.names = 0.7,
+          main = "Standard deviation of differences", xlim = c(0,xmax_val*1.1))
+  legend("bottomright", legend = c("Matched only","All cells"), fill= c(0,"grey"), bty = "n")
+  box()
+}
 
 
 #' Evaluate matching with geographic distances
@@ -476,19 +539,29 @@ evaluateMatching <- function(allvars = NULL, matches = NULL,matchingvars_id = "c
 #' correspond to the 'x' and 'y' coordinates of the Target cells.
 #'
 #' @examples
-#' # Load targetcells data for Target Cells (from rMultivariateMatchingAlgorithms package)
+#' # Load targetcells data for Target Cells
 #' data(targetcells)
+#'
 #' # Create data frame of potential matching variables for Target Cells
 #' allvars <- makeInputdata(targetcells)
+#'
 #' #' # Create vector of matching criteria
 #' criteria <- c(0.7,42,3.3,66,5.4,18.4)
-#  # Find solution for k = 200
-#' results1 <- kpoints(matchingvars,criteria = criteria,klist = 200,n_starts = 1,min_area = 50,iter = 50,raster_template = targetcells[[1]])
-#' # For an example where subset_in_target is TRUE
+#'
+#'  # Find solution for k = 200
+#' # Note: n_starts should be >= 10, it is 1 here to reduce run time.
+#' results1 <- kpoints(matchingvars,criteria = criteria,klist = 200,
+#' n_starts = 1,min_area = 50,iter = 50,raster_template = targetcells[[1]])
+#'
+#'
+#' ###################################
+#' # First an example where subset_in_target = TRUE
 #' # Get points from solution to kpoints algorithm
 #' subsetcells <- results1$solutions[[1]]
+#'
 #' # Find matches and calculate matching quality
 #' quals <- multivarmatch(matchingvars, subsetcells, matchingvars_id = "cellnumbers", raster_template = targetcells[[1]], subset_in_target = TRUE)
+#'
 #' # Look at geographic distances
 #' geodist <- evaluateGeoDist(matches = quals, subsetcells = subsetcells,
 #'                            subset_in_target = TRUE,
@@ -496,19 +569,27 @@ evaluateMatching <- function(allvars = NULL, matches = NULL,matchingvars_id = "c
 #'                            longlat = TRUE, raster_template = targetcells[[1]])
 #'
 #'
-#' # For example with subset_in_target = FALSE
+#' ###################################
+#' # Now an example where subset_in_target is FALSE
 #' # Get points from solution to kpoints algorithm
 #' data(subsetcells)
-#' # Remove duplicates (representing cells with same climate but different soils--
-#' # we want to match on climate only)
+#'
+#' # Remove duplicates (representing cells with same climate but different
+#' soils--we want to match on climate only)
 #' subsetcells <- subsetcells[!duplicated(subsetcells$site_id),]
+#'
 #' # Pull out matching variables only, with site_id that identifies unique climate
-#' subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84",names(matchingvars)[4:9])]
+#' subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84",
+#' names(matchingvars)[4:9])]
+#'
 #' # Ensure that site_id will be values unique to subsetcells
 #' subsetcells$site_id <- paste0("00",subsetcells$site_id)
+#'
 #' # Find matches and calculate matching quality
-#' quals <- multivarmatch(matchingvars, subsetcells=subsetcells, matchingvars_id = "cellnumbers",subsetcells_id = "site_id",
-#'                          raster_template = targetcells[[1]], subset_in_target = FALSE)
+#' quals <- multivarmatch(matchingvars, subsetcells=subsetcells,
+#' matchingvars_id = "cellnumbers",subsetcells_id = "site_id",
+#'                          raster_template = targetcells[[1]],
+#'                          subset_in_target = FALSE)
 #'
 #' # Look at geographic distances
 #' geodist <- evaluateGeoDist(matches = quals, subsetcells = subsetcells,
@@ -539,11 +620,11 @@ evaluateGeoDist <- function(matches, subsetcells, subsetcells_id = 'site_id',
   } else if (!subset_in_target){
     rownames(subsetcells) = subsetcells[,subsetcells_id]
     if (exclude_poor_matches){
-      pts1 <- cbind(subsetcells[as.character(matches$subset_cell),][matches$matching_quality <= matching_distance,c(2,3)],
+      pts1 <- cbind(subsetcells[as.character(as.numeric(matches$subset_cell)),][matches$matching_quality <= matching_distance,c(2,3)],
                     matches[matches$matching_quality <= matching_distance,c(1,2)])
       rownames(pts1) <- matches[matches$matching_quality <= matching_distance,]$target_cell
     } else if (!exclude_poor_matches){
-      pts1 <- cbind(subsetcells[as.character(matches$subset_cell),c(2,3)],
+      pts1 <- cbind(subsetcells[as.character(as.numeric(matches$subset_cell)),c(2,3)],
                     matches[,c(1,2)])
       rownames(pts1) <- matches$target_cell
     }
@@ -601,19 +682,19 @@ evaluateGeoDist <- function(matches, subsetcells, subsetcells_id = 'site_id',
   if (subset_in_target){
     if (exclude_poor_matches){
       pts3 <- cbind(matches[matches$matching_quality <= matching_distance,c(1,2)],
-                    matches[as.character(matches$subset_cell),][matches$matching_quality <= matching_distance,c(1,2)])
+                    matches[as.character(as.numeric(matches$subset_cell)),][matches$matching_quality <= matching_distance,c(1,2)])
     } else if (!exclude_poor_matches){
       pts3 <- cbind(matches[,c(1,2)],
-                    matches[as.character(matches$subset_cell),c(1,2)])
+                    matches[as.character(as.numeric(matches$subset_cell)),c(1,2)])
     }
   } else if (!subset_in_target){
     rownames(subsetcells) = subsetcells[,subsetcells_id]
     if (exclude_poor_matches){
       pts3 <- cbind(matches[matches$matching_quality <= matching_distance,c(1,2)],
-                    subsetcells[as.character(matches$subset_cell),][matches$matching_quality <= matching_distance,c(2,3)])
+                    subsetcells[as.character(as.numeric(matches$subset_cell)),][matches$matching_quality <= matching_distance,c(2,3)])
     } else if (!exclude_poor_matches){
       pts3 <- cbind(matches[,c(1,2)],
-                    subsetcells[as.character(matches$subset_cell),c(2,3)])
+                    subsetcells[as.character(as.numeric(matches$subset_cell)),c(2,3)])
     }
   }
 
