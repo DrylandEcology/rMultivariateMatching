@@ -221,6 +221,8 @@ Matching quality can be used to exclude **target cells** for which there is insu
 
 Matching can also be evaluated by using the `evaluateMatching` function to calculate the standard deviation of differences between **target **and **subset cells** for a set of variables relevant to the project. This provides an estimate of how much variability there is among the **target cells** matched to each **subset cell** and is particularly informative if the variables were not used as part of the matching process. 
 
+If the rownames of `allvars` and `matches` (see below for details) do not match, the `evaluateMatching` function will fail. Importantly, the function will remove cases with missing values from the `allvars` and `matches` data frames and if missing values occur for different cases, the function will fail because the rownames of the two data frames will no longer match.
+
 Here we use 19 bioclim variables (six of which were used as **matching variables**) to evaluate matching in the current example.  
 
 ### Explanation of `evaluateMatching` arguments
@@ -230,6 +232,10 @@ Please also refer to the `evaluateMatching` documentation.
 * `allvars` A data frame generated using `makeInputdata` where column 1 and rownames are 'cellnumbers', columns 2 and 3 correspond to 'x' and 'y' coordinates, and additional columns correspond to various variables (which can include **matching variables**). When `subset_in_target` is `TRUE`, these data represent both **target **and **subset cells**.
 
 * `matches` A data frame output from the `multivarmatch` function.
+
+* `secondarymatch` A boolean indicating if the `matches` data frame comes from the`secondaryMatching` function. 
+
+* `quality_name` Name of the column in the `matches` data frame that contains the matching quality variable to use to evaluate matching "matching_quality" or "matching_quality_secondary".
 
 * `matchingvars_id` The name of the column that contains the unique identifiers for each **target cell**. If `matchingvars` is derived from the `makeInputData`, this will be "cellnumbers"
 
@@ -242,9 +248,12 @@ Please also refer to the `evaluateMatching` documentation.
 ```{r}
 # Run evaluateMatching
 sddiffs <- evaluateMatching(allvars = allvars, matches = quals,
+                            quality_name = "matching_quality",
                             matchingvars_id = "cellnumbers",
-                            subset_in_target = TRUE, matching_distance = 1.5,
-                            plot_diffs = TRUE)
+                            subset_in_target = TRUE, 
+                            matching_distance = 1.5,
+                            plot_diffs = TRUE, 
+                            seconarymatch = FALSE)
 ```
 
 <img src="sd_diffs_withkpoints.png" width="50%">
@@ -276,6 +285,8 @@ Please also refer to the `evaluateGeoDist` documentation.
 
 * `exclude_poor_matches` A boolean indicating if **target cells** with poor matching quality (weighted Euclidean distance between **target **and matched **subset cell** is greater than `matching_distance`) should be excluded from calculations.  
 
+* `quality_name` Name of the column in the `matches` data frame that contains the matching quality variable to use to evaluate matching "matching_quality" or "matching_quality_secondary". 
+
 * `matching_distance` The maximum allowable weighted Euclidean distance between **target **and **subset cells** such that the matched cells can be considered analogous. (Set to 1.5 as described in *Renne et al.*).
 
 * `longlat` A boolean to pass to an internal function. Indicates if the coordinates are in longitude and latitude format for calculating distances between points. Default value is `TRUE` and coordinates must be provided in this format.
@@ -293,7 +304,8 @@ Please also refer to the `evaluateGeoDist` documentation.
 ```{r}
 # Look at geographic distances
 geodist <- evaluateGeoDist(matches = quals, subsetcells = subsetcells,
-                           subset_in_target = TRUE,
+                           subset_in_target = TRUE, 
+                           quality_name = "matching_quality",
                            exclude_poor_matches = TRUE, matching_distance = 1.5,
                            longlat = TRUE, raster_template = targetcells[[1]],
                            map_distances = TRUE, map_neighbor_distances = TRUE,
@@ -427,7 +439,7 @@ Please also refer to the `interpolatePoints` documentation.
 
 * `subset_cell_names` The name of the column in the 'matches' data frame that contains the unique identifiers for the **subset cells** matched to each **target cell**.
 
-* `matching_quality_name` The name of the column in the 'matches' data frame that contains the matching quality for the **subset cells** matched to each **target cell**.
+* `quality_name` The name of the column in the 'matches' data frame that contains the matching quality for the **subset cells** matched to each **target cell**.
 
 * `matching_distance` The maximum allowable weighted Euclidean distance between **target **and **subset cells** such that the matched cells can be considered analogous. (Set to 1.5 as described in Renne et al.).
 
@@ -443,7 +455,7 @@ Please also refer to the `interpolatePoints` documentation.
 interpolatePoints(matches = quals, output_results = output_results,
                   exclude_poor_matches = TRUE,
                   subset_cell_names = "subset_cell",
-                  matching_quality_name = "matching_quality",
+                  quality_name = "matching_quality",
                   matching_distance = 1.5, raster_template = targetcells[[1]],
                   plotraster = TRUE, overwrite = FALSE)
 ```

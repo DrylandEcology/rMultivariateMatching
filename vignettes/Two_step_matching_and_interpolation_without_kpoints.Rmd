@@ -10,7 +10,8 @@ vignette: >
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  eval = FALSE
 )
 ```
 
@@ -93,7 +94,7 @@ criteria_list <- list(range2.5pct, range5pct, range10pct, stddev)
 |   2.49     |  60.37     |    7.41    |    170.74  |     13.53  |    34.27   |
 
 
-Importantly, the `subsetcells` dataset that is included in the `rMultivariateMatching` package is a subset of sites that were simulated in Bradford et al. (2019). The experimental design of that study selected sites using a 10 x 10 km grid across western North American drylands. For each site, they simulated ecohydrological conditions for five different soil types. Thus, we devised a two-step matching method (see the "Two step matching and interpolation without kpoints" vignette) to fit this experimental design. However, for the purposes of the example in the vignette, we wanted to demonstrate matching and interpolation based on simple, one-step matching and the following code will simplify the `subsetcells` dataset include only sites that were simulated with a silt loam soil with 30% sand and 18% clay (this corresponds to "site_ids" that end in ".2").
+Importantly, the `subsetcells` dataset that is included in the `rMultivariateMatching` package is a subset of sites that were simulated in Bradford et al. (2019). The experimental design of that study selected sites using a 10 x 10 km grid across western North American drylands. For each site, they simulated ecohydrological conditions for five different soil types. Thus, we devised a two-step matching method to fit this experimental design. This vignette demonstrates matching and interpolation using this two-step matching process. However, because the first step of matching only uses climate variables, we will start by limiting the `subsetcells` dataset to climatic **matching variables** as shown [above](#table-displaying-the-criteria-list).
 
 ```{r}
 # Bring in Subset cell data
@@ -101,7 +102,7 @@ data(subsetcells)
 
 # Remove duplicates (representing cells with same climate but different soils--
 # we want to match on climate only)
-subsetcells <- subsetcells[seq(2,10630, by = 5),]
+subsetcells <- subsetcells[seq(1,10630, by = 5),]
 
 # Pull out matching variables only, with site_id that identifies unique climate
 subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84","bioclim_01",
@@ -130,7 +131,7 @@ Please also refer to the `choose_criteria` documentation.
 
 * `matchingvars_id` Name of the column in `matchingvars`that provides the unique identifiers for **target cells**. 
 
-* `subsetcells_id` Name of the column in `subsetcells`that provides the unique identifiers for **subset cells**. 
+* `subsetcells_id` Name of the column in `subsetcells`that provides the unique identifiers for **subset cells**. Note that these unique identifiers should be numbers, but they may be classified as characters. In particular, if there are repeats among the`matchingvars_id`s and the `subsetcells_id`s, you can paste "00" before the `subsetcells_id`s to ensure they are unique from the `matchingvars_id`s (as we did in the previous code block).
 
 * `matching_distance` Gives the maximum allowable matching quality value (weighted Euclidean distance) between **target** and **subset cells**, when `subset_in_target` is `FALSE`. Default value is 1 so that output will be comparable to output from `choose_criteria` when `subset_in_target` is `TRUE`.
 
@@ -149,7 +150,7 @@ coverage <- choose_criteria(matchingvars = matchingvars,
 ```
 
 
-<img src="criteriaplot_withoutkpoints.png" width="50%">
+<img src="criteriaplot_twostep.png" width="50%">
 
 
 ### Explanation of `choose_criteria` outputs
@@ -157,6 +158,10 @@ coverage <- choose_criteria(matchingvars = matchingvars,
 The output from the `choose_criteria` function is a named list where the first item ('totalarea') reports the total area in $km^2$ of the **target cells** and the second item ('solution_areas') reports the area represented (Euclidean distance of weighted **matching variables** $\le 1$ between **target** and matched **subset cells**) for each set of **matching criteria**.
 
 ## Perform matching
+
+The two-step matching method described in *Renne et al.* uses the experimental design presented in Bradford et al. (2019) to match low spatial resolution simulated sites (**subset cells**) to high-resolution **target cells**. Each low resolution **subset cell** was simulated with five different soil types, so we have five different sets of output results for each individual site. To achieve matching between these sites and **target cells** we first matched using climate variables, then we found the best match for each **target cell** from the five available soil types for the **subset cell** it was matched to using climate variables.
+
+### First, match on climate variables
 
 Use the `multivarmatch` function to perform multivariate matching. This function will match every **target cell** to one of the **subset cells**. 
 
@@ -172,7 +177,7 @@ Please also refer to the `multivarmatch` documentation.
 
 * `matchingvars_id` The name of the column that contains the unique identifiers for each **target cell**. If `matchingvars` is derived from the `makeInputData`, this will be "cellnumbers".
 
-* `subsetcells_id` The name of the column that contains the unique identifiers for each **subset cell**.
+* `subsetcells_id` The name of the column that contains the unique identifiers for each **subset cell**. Note that these unique identifiers should be numbers, but they may be classified as characters. In particular, if there are repeats among the`matchingvars_id`s and the `subsetcells_id`s, you can paste "00" before the `subsetcells_id`s to ensure they are unique from the `matchingvars_id`s (as we did in the previous code block).
 
 * `addpoints` A boolean indicating whether the **subset cells** should be added to the map of matching quality.
 
@@ -193,21 +198,135 @@ Please also refer to the `multivarmatch` documentation.
 
 ```{r}
 # Create vector of matching criteria
-criteria <- c(0.7,42,3.3,66,5.4,18.4)
+criteria1 <- c(0.7,42,3.3,66,5.4,18.4)
 
 # Find matches and calculate matching quality
-quals <- multivarmatch(matchingvars, subsetcells, criteria = criteria,
+quals <- multivarmatch(matchingvars, subsetcells, criteria = criteria1,
                        matchingvars_id = "cellnumbers",
                        subsetcells_id = "site_id",
                        raster_template = targetcells[[1]],
                        subset_in_target = FALSE, addpoints = FALSE)
 ```
 
-<img src="matchingquality_withoutkpoints.png" width="50%">
+<img src="matchingquality_twostep.png" width="50%">
 
 ### Explanation of `multivarmatch` outputs
 
 The output from the `multivarmatch` function is a data frame of **target cells** with coordinates ('x','y'), cellnumber of each **target cell** ('target_cell'), unique id of the matched **subset cell** ('subset_cell'), and matching quality ('matching_quality'). The function will save a raster of matching quality if `saveraster` is `TRUE` and plot a map of matching quality if `plotraster` is `TRUE`.
+
+### Second, match on soil variables
+
+First, we need to bring in soils data for the **subset** and **target cells**. The five soil types used for the **subset cells** include site-specific soils and four set soil types, as shown in the following table.
+
+| treatment |   soil type   | Sand (%) | Clay (%) | Silt (%) |
+|:---------:|:-------------:|:--------:|:--------:|:--------:|
+|   1       | site-specific |variable  | variable | variable |
+|   2       | silt loam     | 30       |   18     |   52     |
+|   3       | clay loam     | 27       |   35     |   38     |
+|   4       | sandy loam    | 66       |   9      |   25     |
+|   5       | silt loam     | 16       |   9      |   75     |
+
+The `secondaryMatching` function matches first on a `reference_treatment` and then compares that match to a set of `other_treatments`. Note that in a case where the same set of treatments were applied to all simulated sites and there is no 'site-specific' treatment, `secondaryMatching` will still work if one of the set treatments is designated as the `reference_treatment`
+
+In our case, the `reference_treatment` is the site-specific soil type, designated by '.1' appended onto the `site_id`. The other soil types (`other_treatments`) are designated similarly. An example of the five different soil types and their respective `site_ids` are shown in the following table.
+
+#### Soil types used in simulation
+
+| treatment |  site_ids  | Sand (%) | Clay (%) |
+|:---------:|:----------:|:--------:|:--------:|
+|     1     |  24072.1   |   49.1   |   22.85  |
+|     2     |  24072.2   |   30     |   18     |
+|     3     |  24072.3   |   27     |   35     |
+|     4     |  24072.4   |   66     |   9      |
+|     5     |  24072.5   |   16     |   9      |
+
+
+```{r}
+# Subset to include only secondaryvars
+secondaryvars <- allvars[,c("cellnumbers","x","y","sand","clay")]
+
+# Bring in secondary id variable from subsetcells
+data(subsetcells)
+
+# Remove duplicates (keeping only site-specific soils with site_ids ending
+# in ".1").
+subsetcells <- subsetcells[!duplicated(subsetcells$site_id),]
+
+# Pull out matching variables only, with site_id that identifies unique climate
+subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84",
+                              "sand","clay"),]
+
+# Convert sand and clay to percentage from fraction
+subsetcells$sand <- subsetcells$sand*100
+subsetcells$clay <- subsetcells$clay*100
+
+# Make sure subsetcell ids are unique
+subsetcells$site_id <- paste0("00",subsetcells$site_id)
+```
+
+The `secondaryMatching` function requires `other_treatments` as a data frame where rownames are the numbers designating each [treatment type](#soil-types-used-in simulation) and the columns correspond to the secondary matching variables, in the same order as they appear in `matchingvars` (sand and clay in our case).
+
+Again, you will need to select **matching criteria** for the second matching step. You may have some idea of what these should be and you can experiment some by trying different sets of criteria to see what works best. Note that the `choose_criteria` function does not currently work with `secondaryMatching`, so any experimentation must be done manually (e.g., loop through different sets of criteria and compare coverage). Below, we have set **matching criteria** to 10% of the range of sand and clay among the **target cells**.
+
+### Explanation of `secondaryMatching` arguments
+
+Please also refer to the `secondaryMatching` documentation.
+
+* `secondaryvars` A data frame generated using `makeInputdata` or a subset of such a data frame, where the data columns correspond to a set of secondary **matching variables**. These data represent **target cells**.
+
+* `matches` A data frame output from the `multivarmatch` function.
+
+* `subsetcells` A data frame with columns that correspond to those in `secondaryvars`, but represent only one of the treatments (`reference_treatment`). This function is designed to handle an experimental design in which there is a "reference" treatment (which can be either set for all sites or site-specific) and a series of "other" treatments that are the same across all **subset cells**.
+
+* `subsetcells_id` The name of the column that contains the unique identifiers for each **subset cell**. Note that these unique identifiers should be numbers, but they may be classified as characters. In particular, if there are repeats among the`matchingvars_id`s and the `subsetcells_id`s, you can paste "00" before the `subsetcells_id`s to ensure they are unique from the `matchingvars_id`s.
+
+* `subset_in_target` A boolean indicating if the **subset cells** are taken from within the **target cells**. Currently there is only functionality for `FALSE` in this function. 
+
+* `criteria` A vector of **matching criteria** that correspond to the secondary **matching variables**. Matching criteria represent the maximum difference allowed for each variable between matched **target** and **subset cells**.
+
+* `raster_template` This is one of the rasters used to define the **target cells** and it is used as a template for creating a raster of matching quality.
+
+* `reference_treatment` Character, but should be composed only of numbers. Designates the reference treatment identifier that will be pasted onto the `subsetcells_id` as a decimal to generate unique identifiers for each treatment. The combination of the `subsetcells_id` and `reference_treatment` should be able to be converted to numeric. For example, if `subsetcells_id`s are of the form 10001 and the `reference_treatment` is '1', the resulting id would be 10001.1. Default value is '1'.
+
+* `other_treatments` A data frame containing the secondary variables for "other" treatments that are the same across all **subset cells** (e.g., a set of soil types that are simulated for each site in our example). The columns should correspond to the `secondarvars` and the rownames will designate the treatment identifiers that will be pasted onto the `subsetcells_id` to generate unique identifiers for each treatment. For example, see our table of [treatment types](#soil-types-used-in simulation).
+
+**Note:** the function below does not specify several additional arguments that are left as default values. These include:
+
+* `saveraster` A boolean indicating if a raster of matching quality should be saved to file. (Defaults to `FALSE`).
+
+* `plotraster` A boolean indicating if a raster of matching quality should be plotted. (Defaults to `TRUE`).
+
+* `filepath` A destination for a raster of matching quality in the case where `saveraster` = `TRUE`. (Defaults to working directory).
+
+* `overwrite` A boolean indicating if the `raster::writeRaster` function is allowed to overwrite existing files. (Defaults to `FALSE`).
+
+```{r}
+# Bring in "other" treatments
+data(setsoiltypes)
+other_treatments = setsoiltypes
+
+# Calculate criteria
+criteria2 = c((max(secondaryvars$sand,na.rm = T)-
+                 min(secondaryvars$sand,na.rm = T))/10,
+             (max(secondaryvars$clay,na.rm = T)-
+                min(secondaryvars$clay,na.rm = T))/10)
+
+# Run secondary matching on soils data
+quals2 <- secondaryMatching(secondaryvars = secondaryvars, matches = quals,
+                            subsetcells=subsetcells,subsetcells_id = "site_id",
+                            subset_in_target = FALSE, criteria = criteria2,
+                            raster_template = targetcells[[1]],
+                            reference_treatment = "1",
+                            other_treatments = other_treatments)
+```
+
+<img src="soilmatchingquality_twostep.png" width="50%">
+
+
+### Explanation of `secondaryMatching` outputs
+
+The output from the `secondaryMatching` function includes output from `multivarmatch` plus columns that provide the unique id of the matched **subset cell** with treatment added as a decimal ('subset_cell_seconday'), and matching quality of the secondary variables ('matching_quality_secondary'). The function will save a raster of matching quality if `saveraster` is `TRUE` and plot a map of matching quality if `plotraster` is `TRUE`.
+
 
 ## Evaluate matching
 
@@ -225,9 +344,9 @@ Now that we have completed matching, we should evaluate the success of matching.
 
 ### 1. Calculate matching quality
 
-In addition to identifying the matching **subset cell** for each **target cell**, the `multivarmatch` function also calculates the weighted Euclidean distance between matched cells, which can be interpreted as a continuous variable measuring matching quality. Distances less than or equal to one indicate high-quality matching (**matching criteria** have been met for all variables). Distances greater than one indicate that the difference between these **target cells** and their matched **subset cell** exceeds the **matching criterion** for one or more variables.  
+In addition to identifying the matching **subset cell** for each **target cell**, the `multivarmatch` and `seondaryMatching` functions also calculate the weighted Euclidean distance between matched cells for the first and second set of **matching variables**, which can be interpreted as a continuous variable measuring matching quality. Distances less than or equal to one indicate high-quality matching (**matching criteria** have been met for all variables). Distances greater than one indicate that the difference between these **target cells** and their matched **subset cell** exceeds the **matching criterion** for one or more variables.  
 
-Matching quality can be used to exclude **target cells** for which there is insufficient matching, i.e., no simulated site is analogous, and to determine the spatial extent of the represented area. In *Renne et al.*, we used a cut-off of 1.5 as a threshold between high/moderate quality and low quality matching, and excluded sites with matching quality >1.5 from the final interpolated datasets.
+Matching quality can be used to exclude **target cells** for which there is insufficient matching, i.e., no simulated site is analogous, and to determine the spatial extent of the represented area. In *Renne et al.*, we used a cut-off of 1.5 as a threshold between high/moderate quality and low quality matching, and excluded sites with matching quality >1.5 from the final interpolated datasets. Importantly, we did not exclude sites that had low quality matching for soils variables (used in the second matching step) because at 30 arcsecond resolution, the **target cells** are likely to include a range of soil types. Thus, results from the soil type of the matched **subset cells** are likely to be relevant to the **target cells**, even if matching of the soil variables is poor.
 
 
 
@@ -235,7 +354,9 @@ Matching quality can be used to exclude **target cells** for which there is insu
 
 Matching can also be evaluated by using the `evaluateMatching` function to calculate the standard deviation of differences between **target** and **subset cells** for a set of variables relevant to the project. This provides an estimate of how much variability there is among the **target cells** matched to each **subset cell** and is particularly informative if the variables were not used as part of the matching process. 
 
-Here we use 19 bioclim variables (six of which were used as **matching variables**) to evaluate matching in the current example.  
+If the rownames of `allvars` and `matches` (see below for details) do not match, the `evaluateMatching` function will fail. Importantly, the function will remove cases with missing values from the `allvars` and `matches` data frames and if missing values occur for different cases, the function will fail because the rownames of the two data frames will no longer match.
+
+Here we use 19 bioclim variables (six of which were used as **matching variables**) to evaluate matching in the current example (and include soil variables used in matching for reference).
 
 ### Explanation of `evaluateMatching` arguments
 
@@ -243,7 +364,11 @@ Please also refer to the `evaluateMatching` documentation.
 
 * `allvars` A data frame generated using `makeInputdata` where column 1 and rownames are 'cellnumbers', columns 2 and 3 correspond to 'x' and 'y' coordinates, and additional columns correspond to various variables (which can include **matching variables**).
 
-* `matches` A data frame output from the `multivarmatch` function.
+* `matches` A data frame output from the `multivarmatch` or `secondaryMatchinig` function.
+
+* `secondarymatch` A boolean indicating if the `matches` data frame comes from the`secondaryMatching` function. 
+
+* `quality_name` Name of the column in the `matches` data frame that contains the matching quality variable to use to evaluate matching "matching_quality" or "matching_quality_secondary". 
 
 * `matchingvars_id` The name of the column that contains the unique identifiers for each **target cell**. If `matchingvars` is derived from the `makeInputData`, this will be "cellnumbers"
 
@@ -251,19 +376,16 @@ Please also refer to the `evaluateMatching` documentation.
 
 * `matching_distance` The maximum allowable weighted Euclidean distance between **target **and **subset cells** such that the matched cells can be considered analogous. (Set to 1.5 as described in Renne et al.).
 
-* `plot_diffs` A boolean indicating whether a bar plot of the standard deviation of differernces for each variable should be plotted.
+* `plot_diffs` A boolean indicating whether a bar plot of the standard deviation of differences for each variable should be plotted.
 
 ```{r}
 # Bring the full subsetcells data in again to get all variables
 data(subsetcells)
 
-# Remove duplicates (representing cells with same climate but different soils--
-# we want to match on climate only)
-subsetcells <- subsetcells[seq(2,10630, by = 5),]
-
 # Get all variables for Subset cells now:
-subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84",
+subsetcells <- subsetcells[,c("site_ids","X_WGS84","Y_WGS84",
                               names(subsetcells)[8:28])]
+rownames(subsetcells) <- subsetcells$site_ids
 
 # Convert sand and clay fraction to percentage in subsetcells
 subsetcells$sand <- subsetcells$sand*100
@@ -272,14 +394,15 @@ subsetcells$clay <- subsetcells$clay*100
 # Run evaluateMatching
 sddiffs <- evaluateMatching(allvars = allvars, 
                             subsetcells = subsetcells,
-                            matches = quals,
+                            matches = quals2, secondarymatch = TRUE,
+                            quality_name = "matching_quality",
                             matchingvars_id = "cellnumbers",
-                            subsetcells_id = "site_id",
+                            subsetcells_id = "site_ids",
                             subset_in_target = FALSE, matching_distance = 1.5,
                             plot_diffs = TRUE)
 ```
 
-<img src="sd_diffs_withoutkpoints.png" width="50%">
+<img src="sd_diffs_twostep.png" width="50%">
 
 ### Explanation of `evaluateMatching` outputs
 
@@ -302,13 +425,15 @@ Please also refer to the `evaluateGeoDist` documentation.
 
 * `matches` A data frame output from the `multivarmatch` function.
 
-* `subsetcells` A data frame of **subset cells** with column names corresponding exactly to those in `matchingvars`. Row names should be unique identifiers (unique means no repeats among all row names in `targetcells` and `matchingvars`.
+* `subsetcells` A data frame of **subset cells** with column names corresponding exactly to those in `matchingvars`. Note that in our case here, we just need one set of coordinates for **subset cells** (since coordinates are the same for each soil type for each site). 
 
-* `subsetcells_id` The name of the column that contains the unique identifiers for each **subset cell**.
+* `subsetcells_id` The name of the column that contains the unique identifiers for each **subset cell**. Note that these unique identifiers should be numbers, but they may be classified as characters. These should match the 'subset_cell' column in the `matches` data frame.
 
 * `subset_in_target` A boolean indicating if the **subset cells** are taken from within the **target cells**. 
 
 * `exclude_poor_matches` A boolean indicating if **target cells** with poor matching quality (weighted Euclidean distance between **target **and matched **subset cell** is greater than `matching_distance`) should be excluded from calculations.  
+
+* `quality_name` Name of the column in the `matches` data frame that contains the matching quality variable to use to evaluate matching "matching_quality" or "matching_quality_secondary". 
 
 * `matching_distance` The maximum allowable weighted Euclidean distance between **target **and **subset cells** such that the matched cells can be considered analogous. (Set to 1.5 as described in *Renne et al.*).
 
@@ -325,25 +450,37 @@ Please also refer to the `evaluateGeoDist` documentation.
 * `saverasters` A boolean indicating if the rasters of distances should be saved to file.
 
 ```{r}
+# Bring the full subsetcells data in again to get 'site_id' varibles
+data(subsetcells)
+
+# Reduce to unique cell locations
+subsetcells <- subsetcells[!duplicated(subsetcells$site_id),]
+
+# Get all variables for Subset cells now:
+subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84")]
+rownames(subsetcells) <- subsetcells$site_ids
+
+
 # Look at geographic distances
 geodist <- evaluateGeoDist(matches = quals, subsetcells = subsetcells,
-                          subsetcells_id = 'site_id', 
-                          subset_in_target = FALSE,
-                          exclude_poor_matches = TRUE, matching_distance = 1.5,
-                          longlat = TRUE, raster_template = targetcells[[1]],
-                          map_distances = TRUE, map_neighbor_distances = TRUE,
-                          which_distance = "both",saverasters = FALSE)
+                           subsetcells_id = 'site_id',
+                           subset_in_target = FALSE,
+                           quality_name = "matching_quality",
+                           exclude_poor_matches = TRUE,
+                           matching_distance = 1.5,
+                           longlat = TRUE,
+                           raster_template = targetcells[[1]])
 ```
 
 *Distance (km) between* **target** *and* *matched* **subset cells***.*
 
-<img src="geodistance_withoutkpoints.png" width="50%">
+<img src="geodistance_twostep.png" width="50%">
 
 
 
 *Average distance between the* **subset cell** *that is matched to a given* **target cell** *and the* **subset cells** *that are matched to the eight adjacent neighbors of that* **target cell***.*
 
-<img src="neighbordist_withkpoints.png" width="50%">
+<img src="neighbordist_twostep.png" width="50%">
 
 
 ### Explanation of `evaluateGeoDist` outputs
@@ -368,14 +505,10 @@ For our example here, we have simulation output generated by simulations used in
 # Bring in subsetcells dataset again to get output variables
 data(subsetcells)
 
-# Remove duplicates (representing cells with same climate but different soils--
-# we want to match on climate only)
-subsetcells <- subsetcells[seq(2,10630, by = 5),]
-
 # Create a mock dataset of output results
-output_results <- subsetcells[,c("site_id","Dryprop","CwetWinter","CdrySummer",
+output_results <- subsetcells[,c("site_ids","Dryprop","CwetWinter","CdrySummer",
                                  "Cwet8","Dryall","Dryany")]
-rownames(output_results) <- output_results$site_id
+rownames(output_results) <- output_results$site_ids
 ```
 
 ### Explanation of `loocv` arguments
@@ -386,35 +519,64 @@ Please also refer to the `interpolatePoints` documentation.
 
 * `output_results` A data frame of simulation output results for all simulated sites (**subset cells**). The first column and the rownames should correspond to the unique identifiers for the **subset cells**, and must match the rownames in 'matchingvars' exactly.
 
-* `criteria1` A vector of **matching criteria** that correspond to the **matching variables**. Matching criteria represent the maximum difference allowed for each variable between matched **target **and **subset cells**, and should be the same criteria used in `kpoints` and other functions above.
+* `criteria1` A vector of **matching criteria** that correspond to the **matching variables**. Matching criteria represent the maximum difference allowed for each variable between matched **target **and **subset cells**, and should be the same criteria used in `multivarMatch` and other functions above.
+
+* `criteria2` A vector of **matching criteria** that correspond to the secondary **matching variables**. Matching criteria represent the maximum difference allowed for each variable between matched **target **and **subset cells**, and should be the same criteria used in `secondaryMatching`.
 
 * `secondarymatch` A boolean indicating if a secondary matching step should be completed. We only used one step of matching in this example, so it is set to `FALSE`.
+
+* `secondaryvars_id` Column name for the unique identifiers in the `secondaryvars` data frame (should be the first column). 
+
+* `reference_treatment` Character, but should be composed only of numbers. Designates the reference treatment identifier that will be pasted onto the `subsetcells_id` as a decimal to generate unique identifiers for each treatment. The combination of the `subsetcells_id` and `reference_treatment` should be able to be converted to numeric. For example, if `subsetcells_id`s are of the form 10001 and the `reference_treatment` is '1', the resulting id would be 10001.1. Default value is '1'.
+
+* `other_treatments` A data frame containing the secondary variables for "other" treatments that are the same across all **subset cells** (e.g., a set of soil types that are simulated for each site in our example). The columns should correspond to the `secondarvars` and the rownames will designate the treatment identifiers that will be pasted onto the `subsetcells_id` to generate unique identifiers for each treatment. For example, see our table of [treatment types](#soil-types-used-in simulation).
 
 * `n_neighbors` The number of nearest neighbors to search for among the **subset cells**. To achieve leave-one-out cross-validation, this number must be set to 2. The nearest neighbor of each **subset cells** is itself, so the second nearest neighbor will correspond the closest non-self neighbor.
 
 ```{r}
-# Bring in Subset cell data
+# Get subsetcells
 data(subsetcells)
 
-# Remove duplicates (representing cells with same climate but different soils--
-# we want to match on climate only)
-subsetcells <- subsetcells[seq(2,10630, by = 5),]
+# Pull out only matching variables and remove duplicates
+matchingvars <- subsetcells[,c("site_id","X_WGS84","Y_WGS84","bioclim_01",
+                         "bioclim_04","bioclim_09","bioclim_12",
+                         "bioclim_15","bioclim_18")]
 
-# Pull out matching variables only, with site_id that identifies unique climate
-subsetcells_matchingvars <- subsetcells[,c("site_id","X_WGS84","Y_WGS84",
-                                           "bioclim_01","bioclim_04","bioclim_09",
-                                           "bioclim_12","bioclim_15","bioclim_18")]
-names(subsetcells_matchingvars)[2:3] <- c("x","y")
+# Fix names
+names(matchingvars) <- c("cellnumbers","x","y",names(matchingvars)[4:9])
 
-# Use site_id as rownames and remove
-rownames(subsetcells_matchingvars) <- subsetcells_matchingvars$site_id
-subsetcells_matchingvars <- subsetcells_matchingvars[,-1]
+# Remove duplicates (we will first match on climate only)
+matchingvars <- matchingvars[!duplicated(matchingvars$cellnumbers),]
+rownames(matchingvars) <- matchingvars$cellnumbers
 
-# Run leave-one-out cross validation of the output result
-loocv_results <- loocv(matchingvars = subsetcells_matchingvars,
+# Remove cellnumbers column
+matchingvars <- matchingvars[,-1]
+
+# Pull out secondary vars and keep both identifiers
+secondaryvars <- subsetcells[,c("site_id","X_WGS84","Y_WGS84","sand","clay")]
+
+# Fix names
+names(secondaryvars) <- c("cellnumbers","x","y",names(secondaryvars)[4:5])
+
+# Convert sand and clay to percentage from fraction
+secondaryvars$sand <- secondaryvars$sand*100
+secondaryvars$clay <- secondaryvars$clay*100
+
+# Remove duplicates
+secondaryvars <- secondaryvars[!duplicated(secondaryvars$cellnumbers),]
+
+# Set rownames as cellnumbers
+rownames(secondaryvars) <- secondaryvars$cellnumbers
+
+# Run leave-one-out cross validation of output results
+loocv_results <- loocv(matchingvars = matchingvars,
+                       secondaryvars = secondaryvars,
                        output_results = output_results,
-                       criteria1 = criteria, 
-                       secondarymatch = FALSE, n_neighbors = 2)
+                       criteria1 = criteria1, criteria2 = criteria2,
+                       secondarymatch = TRUE,
+                       secondaryvars_id = "cellnumbers",
+                       reference_treatment = "1", n_neighbors = 2,
+                       other_treatments = other_treatments)
 ```
 
 
@@ -427,7 +589,7 @@ The `loocv` function output can be used to visualize the distribution of the mat
 ```{r, include = F}
 # Visualize distribution of matching errors
 par(mfrow = c(3,2), mar = c(2,2,2,1), mgp = c(1,0.2,0), tcl = 0.2)
-for (i in 6:11){
+for (i in 8:13){
   hist(loocv_results[,i], breaks = 30,
        main = paste0("Matching errors: ", 
                      gsub("_diff","",names(loocv_results)[i])),
@@ -443,7 +605,7 @@ for (i in 6:11){
 }
 ```
 
-<img src="cverrors_withoutkpoints.png" width="80%">
+<img src="cverrors_twostep.png" width="80%">
 
 
 ### Calculate matching errors
@@ -459,11 +621,11 @@ Finally, matching errors for each output variable can be estimated from the outp
 ```{r}
 # Estimate matching errors for each output variable
 est_errors <- cverrors(loocv_output = loocv_results, 
-                       first_output_column = 6)
+                       first_output_column = 8)
 ```
 
-       Dryprop  CwetWinter  CdrySummer       Cwet8      Dryall      Dryany 
-    0.06451686 14.26300399  8.56043378  6.01712207 32.49556186 32.21232009 
+        Dryprop  CwetWinter  CdrySummer       Cwet8      Dryall      Dryany 
+     0.06741354 15.30992769  8.95753887  6.47243053 34.22868551 33.24872744 
 ## Interpolate output variables
 
 Finally, the `iterpolatePoints` function can be used to interpolate results from simulated **subset cells** to all **target cells** across the study area by assigning simulation results from the **subset cells** to their matched **target cells**.  
@@ -482,7 +644,7 @@ Please also refer to the `interpolatePoints` documentation.
 
 * `subset_cell_names` The name of the column in the 'matches' data frame that contains the unique identifiers for the **subset cells** matched to each **target cell**.
 
-* `matching_quality_name` The name of the column in the 'matches' data frame that contains the matching quality for the **subset cells** matched to each **target cell**.
+* `quality_name` The name of the column in the 'matches' data frame that contains the matching quality for the **subset cells** matched to each **target cell**.
 
 * `matching_distance` The maximum allowable weighted Euclidean distance between **target **and **subset cells** such that the matched cells can be considered analogous. (Set to 1.5 as described in Renne et al.).
 
@@ -495,10 +657,10 @@ Please also refer to the `interpolatePoints` documentation.
 
 ```{r}
 # Interpolate simulation output to rasters
-interpolatePoints(matches = quals, output_results = output_results,
+interpolatePoints(matches = quals2, output_results = output_results,
                   exclude_poor_matches = TRUE,
-                  subset_cell_names = "subset_cell",
-                  matching_quality_name = "matching_quality",
+                  subset_cell_names = "subset_cell_secondary",
+                  quality_name = "matching_quality",
                   matching_distance = 1.5, raster_template = targetcells[[1]],
                   plotraster = TRUE, overwrite = FALSE)
 ```
@@ -506,37 +668,37 @@ interpolatePoints(matches = quals, output_results = output_results,
 
 *Interpolated output of DryPROP.*
 
-<img src="interpolatedoutput_dryprop.png" width="50%">
+<img src="interpolatedoutput_dryprop_twostep.png" width="50%">
 
 
 
 *Interpolated output of CwetWinter.*
 
-<img src="interpolatedoutput_cwetwinter.png" width="50%">
+<img src="interpolatedoutput_cwetwinter_twostep.png" width="50%">
 
 
 
 *Interpolated output of CdrySummer.*
 
-<img src="interpolatedoutput_cdrysummer.png" width="50%">
+<img src="interpolatedoutput_cdrysummer_twostep.png" width="50%">
 
 
 
 *Interpolated output of Cwet8.*
 
-<img src="interpolatedoutput_cwet8.png" width="50%">
+<img src="interpolatedoutput_cwet8_twostep.png" width="50%">
 
 
 
 *Interpolated output of Dryall.*
 
-<img src="interpolatedoutput_dryall.png" width="50%">
+<img src="interpolatedoutput_dryall_twostep.png" width="50%">
 
 
 
 *Interpolated output of Dryany.*
 
-<img src="interpolatedoutput_dryany.png" width="50%">
+<img src="interpolatedoutput_dryany_twostep.png" width="50%">
 
 
 

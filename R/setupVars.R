@@ -84,9 +84,13 @@ makeInputdata <- function(x){
 #' `matchingvars`that provides the unique identifiers for Target cells. Defaults
 #' to "cellnumbers", which is the unique ID column created by \code{\link{makeInputdata}}.
 #'
-#' @param subsetcells_id character or numeric. Refers to the column in
-#' `subsetcells`that provides the unique identifiers for Subset cells. Defaults
-#' to "site_id".
+#' @param subsetcells_id character or numeric, but must be composed of numbers
+#' and convertable to numeric. Refers to the column in `subsetcells`that provides
+#' the unique identifiers for Subset cells. When `subset_in_target` is TRUE,
+#' these ids must be unique from `matchingvars_ids`. Note that if there are
+#' repeats between the`matchingvars_id`s and the `subsetcells_id`s, you can paste
+#' "00" before the `subsetcells_id`s to ensure they are unique from the
+#' `matchingvars_id`s. Defaults to "site_id".
 #'
 #' @param matching_distance Gives the maximum allowable matching quality
 #' value (weighted Euclidean distance) between Target and Subset cells, when
@@ -116,6 +120,8 @@ makeInputdata <- function(x){
 #' range10pct <- apply(matchingvars[,4:ncol(matchingvars)],2,
 #' function(x){(max(x)-min(x))*0.1})
 #' stddev <- apply(matchingvars[,4:ncol(matchingvars)],2,sd)
+#'
+#' # Create a list of criteria
 #' criteria_list <- list(range2.5pct, range5pct, range10pct, stddev)
 #'
 #' ###################################
@@ -130,14 +136,19 @@ makeInputdata <- function(x){
 #' # Now an example where subset_in_target is FALSE
 #' # Bring in Subset cell data
 #' data(subsetcells)
+#'
 #' # Remove duplicates (representing cells with same climate but different soils--
 #' # we want to match on climate only)
 #' subsetcells <- subsetcells[!duplicated(subsetcells$site_id),]
+#'
 #' # Pull out matching variables only, with site_id that identifies unique climate
-#' subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84"
-#'                               names(matchingvars)[4:9])]
+#' subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84","bioclim_01",
+#' "bioclim_04","bioclim_09","bioclim_12",
+#' "bioclim_15","bioclim_18")]
+#'
 #' # Ensure that site_id will be values unique to subsetcells
 #' subsetcells$site_id <- paste0("00",subsetcells$site_id)
+#'
 #' # Run choose_criteria function to evaluate different matching criteria
 #' coverage <- choose_criteria(matchingvars = matchingvars,
 #'                             criteria_list = criteria_list,
@@ -193,7 +204,7 @@ choose_criteria <- function(matchingvars = NULL, criteria_list = NULL,
                              subset_in_target = FALSE,
                              addpoints = FALSE, ...)
 
-      criteria_results[["solution_areas"]][i] <- round(sum(extract(areas,as.numeric(rownames(quals[quals$matching_quality <= matching_distance,])))))
+      criteria_results[["solution_areas"]][i] <- round(sum(raster::extract(areas,as.numeric(rownames(quals[quals$matching_quality <= matching_distance,])))))
     }
     if (plot_coverage){
       criteriaplot(criteria_results, criteria_list)

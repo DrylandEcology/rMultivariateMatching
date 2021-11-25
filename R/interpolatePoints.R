@@ -22,7 +22,7 @@
 #' matched to each Target cell. Defaults to "subset_cell". When 'matches' is the
 #' output from `secondaryMatching`, this should be 'subset_cell_secondary'.
 #'
-#' @param matching_quality_name character. This is the name of the column in the
+#' @param quality_name character. This is the name of the column in the
 #' 'matches' data frame that provides the matching quality between the Subset cells
 #' and Target cells. Defaults to ""matching_quality"". When 'matches' is the
 #' output from `secondaryMatching`, this should be 'matching_quality_secondary'.
@@ -42,17 +42,20 @@
 #' @param overwrite boolean. Indicates whether saving the rasters will be allowed
 #' to overwrite existing files with the same name. Defaults to FALSE.
 #'
-#' @return raster files of interpolated output variables.
+#' @return Raster files of interpolated output variables.
 #'
 #'
 #' @examples
-#' # Load targetcells data for Target Cells (from rMultivariateMatchingAlgorithms package)
+#' # Load targetcells data for Target Cells
 #' data(targetcells)
+#'
 #' # Create data frame of potential matching variables for Target Cells
 #' allvars <- makeInputdata(targetcells)
+#' \
 #' # Subset to include only matching variables
 #' matchingvars <- allvars[,c("cellnumbers","x","y","bioclim_01","bioclim_04",
 #'  "bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+#'
 #' # Create vector of matching criteria
 #' criteria <- c(0.7,42,3.3,66,5.4,18.4)
 #'
@@ -61,13 +64,16 @@
 #' # Find solution for k = 200
 #' results1 <- kpoints(matchingvars,criteria = criteria,klist = 200,n_starts = 1,
 #'                     min_area = 50,iter = 50,raster_template = targetcells[[1]])
+#'
 #' # Get points from solution to kpoints algorithm
 #' subsetcells <- results1$solutions[[1]]
+#'
 #' # Find matches and calculate matching quality
 #' quals <- multivarmatch(matchingvars, subsetcells, criteria = criteria,
 #'                          matchingvars_id = "cellnumbers",
 #'                          raster_template = targetcells[[1]],
 #'                          subset_in_target = TRUE)
+#'
 #' # Create toy data set of "output variables"
 #' # There are really just climate variables from the 'targetcells' rasters,
 #' # but we will treat them as output variables to illustrate the method
@@ -77,16 +83,17 @@
 #' interpolatePoints(matches = quals, output_results = output_results,
 #'                   exclude_poor_matches = TRUE,
 #'                   subset_cell_names = "subset_cell",
-#'                   matching_quality_name = "matching_quality",
+#'                   quality_name = "matching_quality",
 #'                   matching_distance = 1.5, raster_template = targetcells[[1]],
 #'                   plotraster = TRUE, filepath = getwd(),
 #'                   overwrite = FALSE)
 #'
 #'
-#'
+#' ###################################
 # # For example where subset cells were not generated from kpoint function
 # # Get points from solution to kpoints algorithm
 # data(subsetcells)
+
 #' # Pull results from subsetcells
 #' output_results <- subsetcells[,c("site_ids","Dryprop","CwetWinter","CdrySummer",
 #'                                  "Cwet8","Dryall","Dryany")]
@@ -95,10 +102,15 @@
 #' # Remove duplicates (representing cells with same climate but different soils--
 #' # we want to match on climate only)
 #' subsetcells <- subsetcells[!duplicated(subsetcells$site_id),]
+#'
 #' # Pull out matching variables only, with site_id that identifies unique climate
-#' subsetcells1 <- subsetcells[,c("site_id","X_WGS84","Y_WGS84",names(matchingvars)[4:9])]
+#' subsetcells1 <- subsetcells[,c("site_id","X_WGS84","Y_WGS84","bioclim_01",
+#' "bioclim_04","bioclim_09","bioclim_12",
+#' "bioclim_15","bioclim_18")]
+#'
 #' # Ensure that site_id will be values unique to subsetcells
 #' subsetcells1$site_id <- paste0("00",subsetcells$site_id)
+#'
 #' # Find matches and calculate matching quality
 #' quals <- multivarmatch(matchingvars, subsetcells=subsetcells1,
 #'                          criteria = criteria,
@@ -113,12 +125,15 @@
 #'
 #' # Bring in secondary id variable from subsetcells
 #' data(subsetcells)
+#'
 #' # Remove duplicates (keeping only site-specific soils with site_ids ending
 #' # in ".1").
 #' subsetcells <- subsetcells[!duplicated(subsetcells$site_id),]
+#'
 #' # Pull out matching variables only, with site_id that identifies unique climate
 #' subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84",
 #'                               "sand","clay"),]
+#'
 #' # Convert sand and clay to percentage from fraction
 #' subsetcells$sand <- subsetcells$sand*100
 #' subsetcells$clay <- subsetcells$clay*100
@@ -129,9 +144,12 @@
 #' # Bring in "other" treatments
 #' data(setsoiltypes)
 #' other_treatments = setsoiltypes
+#'
 #' # Calculate criteria
-#' criteria = c((max(secondaryvars$sand,na.rm = T)-min(secondaryvars$sand,na.rm = T))/10,
-#'              (max(secondaryvars$clay,na.rm = T)-min(secondaryvars$clay,na.rm = T))/10)
+#' criteria = c((max(secondaryvars$sand,na.rm = T)-
+#'                  min(secondaryvars$sand,na.rm = T))/10,
+#'              (max(secondaryvars$clay,na.rm = T)-
+#'                  min(secondaryvars$clay,na.rm = T))/10)
 #'
 #' # Run secondary matching on soils data
 #' quals2 <- secondaryMatching(secondaryvars = secondaryvars, matches = quals,
@@ -143,25 +161,27 @@
 #'
 #' # Interpolate simulation output to rasters
 #' interpolatePoints(matches = quals2, output_results = output_results,
-#'                   exclude_poor_matches = FALSE,
+#'                   exclude_poor_matches = TRUE,
 #'                   subset_cell_names = "subset_cell_secondary",
-#'                   matching_quality_name = "matching_quality_secondary",
+#'                   quality_name = "matching_quality_secondary",
 #'                   matching_distance = 1.5, raster_template = targetcells[[1]],
 #'                   plotraster = TRUE, filepath = getwd(),
 #'                   overwrite = FALSE)
+#'
+#'
 
 
 interpolatePoints <- function(matches = NULL, output_results = NULL,
                               exclude_poor_matches = TRUE,
                               subset_cell_names = "subset_cell",
-                              matching_quality_name = "matching_quality",
+                              quality_name = "matching_quality",
                               matching_distance = 1.5,
                               raster_template = NULL,
                               plotraster = TRUE,
                               filepath = getwd(),
                               overwrite = FALSE){
   if (exclude_poor_matches){
-    matches <- matches[matches[,matching_quality_name] <= matching_distance,]
+    matches <- matches[matches[,quality_name] <= matching_distance,]
   }
 
   # Interpolate variables
@@ -177,7 +197,7 @@ interpolatePoints <- function(matches = NULL, output_results = NULL,
                          fun = mean, na.rm = T)
   names(r) <- names(output_results[i])
   if (plotraster){
-      if (nchar(as.character(floor(mean(theseresults)))) > 1){
+      if (nchar(as.character(floor(mean(theseresults, na.rm = T)))) > 1){
         rounding = 0
       } else {
         rounding = 2

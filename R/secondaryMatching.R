@@ -21,11 +21,11 @@
 #' @param subsetcells data frame with columns that correspond to those in
 #' `secondaryvars`. Currently, there is no functionality for `subset_in_target` =
 #' TRUE, so subset cells should represent a separate set of simulated (Subset)
-#' cells. This function is designed to handle experimental design in which there
-#' is a "reference" treatment that is site-specific (e.g., site-specific soils)
-#' and a series of "other" treatments that are the same across all Subset cells.
-#' Thus, the subsetcells data frame should contain secondary variables that
-#' correspond to the site-specific treatment only.
+#' cells. This function is designed to handle an experimental design in which there
+#' is a "reference" treatment (which can either be the same for all Subset cells or
+#' site-specific (e.g., site-specific soils)) and a series of "other" treatments
+#' that are the same across all Subset cells. Thus, the `subsetcells` data frame
+#' should contain secondary variables that correspond to only one treatment.
 #'
 #' @param secondaryvars_id character or numeric. Refers to the column in
 #' `matchingvars`that provides the unique identifiers for Target cells. Defaults
@@ -35,9 +35,13 @@
 #' treatment identifier that will be pasted onto the `subsetcells_id` to generate
 #' unique identifiers for each treatment. Default value is "1".
 #'
-#' @param subsetcells_id character or numeric. Refers to the column in
-#' `subsetcells`that provides the unique identifiers for Target cells. Defaults
-#' to NULL.
+#' @param subsetcells_id character or numeric, but must be composed of numbers
+#' and convertable to numeric. Refers to the column in `subsetcells`that provides
+#' the unique identifiers for Subset cells. When `subset_in_target` is TRUE,
+#' these ids must be unique from `matchingvars_ids`. Note that if there are
+#' repeats between the`matchingvars_id`s and the `subsetcells_id`s, you can paste
+#' "00" before the `subsetcells_id`s to ensure they are unique from the
+#' `matchingvars_id`s. Defaults to NULL.
 #'
 #' @param other_treatments data frame. Provides secondary variables for "other"
 #' treatments that are common among all Subset cells (e.g., a set of soil types
@@ -83,36 +87,51 @@
 #' @examples
 #' # Load targetcells data for Target Cells (from rMultivariateMatchingAlgorithms package)
 #' data(targetcells)
+#'
 #' #Create data frame of potential matching variables for Target Cells
 #' allvars <- makeInputdata(targetcells)
-#' # Restrict data to matching variables of interest
-#' matchingvars <- allvars[,c("cellnumbers","x","y","bioclim_01","bioclim_04","bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
-#' # Create vector of matching criteria
 #'
-#' # For example with subset_in_target = FALSE (subset_in_target = TRUE is not
-#' # functional at this time)
+#' # Restrict data to matching variables of interest
+#' matchingvars <- allvars[,c("cellnumbers","x","y","bioclim_01",
+#' "bioclim_04","bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+#'
+#' # Create vector of matching criteria
+#' criteria <- c(0.7,42,3.3,66,5.4,18.4)
+#'
+#' ###################################
+#' # For example with subset_in_target = FALSE
+#' # (There is no functionality for subset_in_target = TRUE at this time)
 #'
 #' # Get points from solution to kpoints algorithm
 #' data(subsetcells)
+#'
 #' # Remove duplicates (representing cells with same climate but different soils--
 #' # we want to match on climate only)
 #' subsetcells <- subsetcells[!duplicated(subsetcells$site_id),]
+#'
 #' # Pull out matching variables only, with site_id that identifies unique climate
-#' subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84",names(matchingvars)[4:9])]
+#' subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84","bioclim_01",
+#' "bioclim_04","bioclim_09","bioclim_12",
+#' "bioclim_15","bioclim_18")]
+#'
 #' # Ensure that site_id will be values unique to subsetcells
 #' subsetcells$site_id <- paste0("00",subsetcells$site_id)
+#'
 #' # Find matches and calculate matching quality
-#' quals <- multivarmatch(matchingvars, subsetcells=subsetcells, matchingvars_id = "cellnumbers",subsetcells_id = "site_id",
-#'                          raster_template = targetcells[[1]], subset_in_target = FALSE)
+#' quals <- multivarmatch(matchingvars, subsetcells=subsetcells,
+#' matchingvars_id = "cellnumbers",subsetcells_id = "site_id",
+#' raster_template = targetcells[[1]], subset_in_target = FALSE)
 #'
 #' # Subset to include only secondaryvars
 #' secondaryvars <- allvars[,c("cellnumbers","x","y","sand","clay")]
 #'
 #' # Bring in secondary id variable from subsetcells
 #' data(subsetcells)
+#'
 #' # Remove duplicates (keeping only site-specific soils with site_ids ending
 #' # in ".1").
 #' subsetcells <- subsetcells[!duplicated(subsetcells$site_id),]
+#'
 #' # Pull out matching variables only, with site_id that identifies unique climate
 #' subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84",
 #'                               "sand","clay"),]
@@ -122,10 +141,11 @@
 #'
 #' # Make sure subsetcell ids are unique
 #' subsetcells$site_id <- paste0("00",subsetcells$site_id)
-
+#'
 #' # Bring in "other" treatments
 #' data(setsoiltypes)
 #' other_treatments = setsoiltypes
+#'
 #' # Calculate criteria
 #' criteria = c((max(secondaryvars$sand,na.rm = T)-min(secondaryvars$sand,na.rm = T))/10,
 #'              (max(secondaryvars$clay,na.rm = T)-min(secondaryvars$clay,na.rm = T))/10)
@@ -196,8 +216,8 @@ secondaryMatching <- function(secondaryvars = NULL, matches = NULL, subsetcells 
 
     # Set secondary id columns to rownames
     if (!is_loocv){
-    rownames(secondaryvars) <- secondaryvars[,secondaryvars_id]
-    rownames(subsetcells) <- subsetcells[,subsetcells_id]
+    rownames(secondaryvars) <- as.character(as.numeric(secondaryvars[,secondaryvars_id]))
+    rownames(subsetcells) <- as.character(as.numeric(subsetcells[,subsetcells_id]))
     }
   }
 
@@ -259,6 +279,8 @@ secondaryMatching <- function(secondaryvars = NULL, matches = NULL, subsetcells 
   # Calculate secondary matching quality
   secondary_matching <- cbind(site_dist,other_dist)[names_selection_matrix]
 
+  # Save original matches to matches_complete
+  matches_complete <- matches
   # Remove any site without soils information from matches
   matches <- matches[complete.cases(secondaryvars),]
   # Create a matches column for new matches
@@ -284,6 +306,16 @@ secondaryMatching <- function(secondaryvars = NULL, matches = NULL, subsetcells 
     matches <- matches1[,-which(colnames(matches1) == "tmp_target_cell")]
   }
 
+  if (!is_loocv){
+  # Bring back in cells for which secondary variables might be missing
+  matches <- merge(matches_complete, matches, by = c("x","y","target_cell","subset_cell","matching_quality"), all = T)
+  }
+
+  # Sort by Target cells
+  matches <- matches[order(as.numeric(matches$target_cell)),]
+  rownames(matches) <- matches$target_cell
+
+
   if (saveraster | plotraster){
   # Create spatial points dataframe
   ptsx <- sp::SpatialPointsDataFrame(matches[,1:2],
@@ -302,7 +334,7 @@ secondaryMatching <- function(secondaryvars = NULL, matches = NULL, subsetcells 
   if (plotraster){
     # Designate colors, breaks, and plotting settings
     cols = rev(c("#d7191c","#fdae61","#abd9e9","#2c7bb6"))
-    bks = c(0,0.5,1,1.5,5)
+    bks = c(0,0.5,1,1.5,max(matches$matching_quality_secondary,na.rm=T))
     thisVariable = "Matching quality"
     legendPlot(r, bks = bks, cols = cols, thisVariable = "Secondary matching quality",matchingQ = TRUE, ...)
   }

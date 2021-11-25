@@ -28,9 +28,13 @@
 #' `matchingvars`that provides the unique identifiers for Target cells. Defaults
 #' to "cellnumbers", which is the unique ID column created by \code{\link{makeInputdata}}.
 #'
-#' @param subsetcells_id character or numeric. Refers to the column in
-#' `subsetcells`that provides the unique identifiers for Subset cells. Defaults
-#' to NULL.
+#' @param subsetcells_id character or numeric, but must be composed of numbers
+#' and convertable to numeric. Refers to the column in `subsetcells`that provides
+#' the unique identifiers for Subset cells. When `subset_in_target` is TRUE,
+#' these ids must be unique from `matchingvars_ids`. Note that if there are
+#' repeats between the`matchingvars_id`s and the `subsetcells_id`s, you can paste
+#' "00" before the `subsetcells_id`s to ensure they are unique from the
+#' `matchingvars_id`s. Defaults to NULL.
 #'
 #' @param criteria single value or vector of length equal to the number of matching variables,
 #' where values corresponds to the matching criterion for each matching variable
@@ -103,8 +107,9 @@
 #' subsetcells <- subsetcells[!duplicated(subsetcells$site_id),]
 #'
 #' # Pull out matching variables only, with site_id that identifies unique climate
-#' subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84",
-#' names(matchingvars)[4:9])]
+#' subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84","bioclim_01",
+#' "bioclim_04","bioclim_09","bioclim_12",
+#' "bioclim_15","bioclim_18")]
 #'
 #' # Ensure that site_id will be values unique to subsetcells
 #' subsetcells$site_id <- paste0("00",subsetcells$site_id)
@@ -273,12 +278,24 @@ multivarmatch <- function(matchingvars,subsetcells,matchingvars_id = "cellnumber
 #' `matchingvars`that provides the unique identifiers for target cells. Defaults
 #' to "cellnumbers", which is the unique ID column created by \code{\link{makeInputdata}}.
 #'
-#' @param subsetcells_id character or numeric. Refers to the column in
-#' `subsetcells`that provides the unique identifiers for target cells. Defaults
-#' to NULL.
+#' @param subsetcells_id character or numeric, but must be composed of numbers
+#' and convertable to numeric. Refers to the column in `subsetcells`that provides
+#' the unique identifiers for Subset cells. When `subset_in_target` is TRUE,
+#' these ids must be unique from `matchingvars_ids`. Note that if there are
+#' repeats between the`matchingvars_id`s and the `subsetcells_id`s, you can paste
+#' "00" before the `subsetcells_id`s to ensure they are unique from the
+#' `matchingvars_id`s. Defaults to NULL.
 #'
-#' @param matches data frame output from the \code{\link{multivarmatch}}
-#' function.
+#' @param matches data frame output from the \code{\link{multivarmatch}} or
+#' \code{\link{secondaryMatching}} functions.
+#'
+#' @param secondarymatch boolean. Indicates if the `matches` data frame comes
+#' from the \code{\link{secondaryMatching}} function.
+#'
+#' @param quality_name character. Name of the column in the `matches` data frame
+#' that contains the matching quality variable to use to evaluate matching
+#' "matching_quality" or "matching_quality_secondary".
+#' Defaults to "matching_quality"
 #'
 #' @param subset_in_target boolean. Indicates if Subset cells have been selected
 #' from Target cells using \code{\link{kpoints}} function
@@ -336,6 +353,7 @@ multivarmatch <- function(matchingvars,subsetcells,matchingvars_id = "cellnumber
 #' # Run evaluateMatching
 #' sddiffs <- evaluateMatching(allvars = allvars, matches = quals,
 #'                             matchingvars_id = "cellnumbers",
+#'                             secondarymatch = FALSE,
 #'                             subset_in_target = TRUE, matching_distance = 1.5,
 #'                             plot_diffs = TRUE)
 #'
@@ -349,14 +367,17 @@ multivarmatch <- function(matchingvars,subsetcells,matchingvars_id = "cellnumber
 #' subsetcells <- subsetcells[!duplicated(subsetcells$site_id),]
 #'
 #' # Pull out matching variables only, with site_id that identifies unique climate
-#' subsetcells1 <- subsetcells[,c("site_id","X_WGS84","Y_WGS84",names(matchingvars)[4:9])]
+#' subsetcells1 <- subsetcells[,c("site_id","X_WGS84","Y_WGS84","bioclim_01",
+#' "bioclim_04","bioclim_09","bioclim_12",
+#' "bioclim_15","bioclim_18")]
 #'
 #' # Ensure that site_id will be values unique to subsetcells
 #' subsetcells1$site_id <- paste0("00",subsetcells$site_id)
 #'
 #' # Find matches and calculate matching quality
-#' quals <- multivarmatch(matchingvars, subsetcells=subsetcells1, matchingvars_id = "cellnumbers",subsetcells_id = "site_id",
-#'                          raster_templat = targetcells[[1]], subset_in_target = FALSE)
+#' quals <- multivarmatch(matchingvars, subsetcells=subsetcells1,
+#' matchingvars_id = "cellnumbers",subsetcells_id = "site_id",
+#' raster_templat = targetcells[[1]], subset_in_target = FALSE)
 #'
 #' # Get all variables for Subset cells now:
 #' subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84",
@@ -365,14 +386,18 @@ multivarmatch <- function(matchingvars,subsetcells,matchingvars_id = "cellnumber
 #' # Run evaluateMatching
 #' sddiffs <- evaluateMatching(allvars = allvars[,c(1:22)],
 #'                             subsetcells = subsetcells,
+#'                             secondarymatch = TRUE,
+#'                             quality_name = "matching_quality",
 #'                             matches = quals,
 #'                             matchingvars_id = "cellnumbers",
 #'                             subsetcells_id = "site_id",
-#'                             subset_in_target = FALSE, matching_distance = 1.5,
+#'                             subset_in_target = FALSE,
+#'                             matching_distance = 1.5,
 #'                             plot_diffs = TRUE)
 
 evaluateMatching <- function(allvars = NULL, subsetcells = NULL,
-                             matches = NULL,
+                             matches = NULL, secondarymatch = FALSE,
+                             quality_name = "matching_quality",
                              matchingvars_id = "cellnumbers",
                              subsetcells_id = NULL,subset_in_target = TRUE,
                              matching_distance = 1.5, plot_diffs = TRUE){
@@ -384,18 +409,25 @@ evaluateMatching <- function(allvars = NULL, subsetcells = NULL,
   }
   for (ci in 4:ncol(matchingvars)){
     if (!is.numeric(matchingvars[,ci])){
-      stop("Matching variable '",colnames(allvars)[ci],"' is not numeric.")
+      stop("Variable '",colnames(allvars)[ci],"' is not numeric.")
     }
   }
-  if (sum(names(matches) != c("x","y","target_cell","subset_cell","matching_quality")) > 0){
-    stop("Verify inputs: 'matches' object has unexpected column names.")
-  }
+  # Modify allvars and matches to exclude missing data
+  allvars <- allvars[complete.cases(allvars),]
+  matches <- matches[complete.cases(matches),]
   if (sum(rownames(allvars)==rownames(matches)) < nrow(allvars)){
-    stop("Verify innputs: rownames of 'allvars' and 'matches' do not match.")
+    stop("Verify inputs: rownames of 'allvars' and 'matches' do not match.")
+  }
+
+  # Modify matches data frame if secondarymatch = TRUE
+  if (secondarymatch){
+    matches <- data.frame(x = matches$x, y = matches$y, target_cell = matches$target_cell,
+                          subset_cell = matches$subset_cell_secondary,
+                          matching_quality = matches[,quality_name])
   }
 
   # Create new allvars dataframe with matches column
-  allvars1 <- cbind(allvars,subset_cell = as.numeric(matches[allvars$cellnumbers == matches$target_cell,]$subset_cell))
+  allvars1 <- cbind(allvars,subset_cell = as.numeric(matches$subset_cell))
 
   # Exclude poor matches
   matchedonly <- allvars1[matches$matching_quality <= matching_distance, ]
@@ -489,12 +521,21 @@ sd_barplot <- function(results){
 #' `matchingvars`that provides the unique identifiers for target cells. Defaults
 #' to "cellnumbers", which is the unique ID column created by \code{\link{makeInputdata}}.
 #'
-#' @param subsetcells_id character or numeric. Refers to the column in
-#' `subsetcells`that provides the unique identifiers for target cells. Defaults
-#' to NULL.
+#' @param subsetcells_id character or numeric, but must be composed of numbers
+#' and convertable to numeric. Refers to the column in `subsetcells`that provides
+#' the unique identifiers for Subset cells. When `subset_in_target` is TRUE,
+#' these ids must be unique from `matchingvars_ids`. Note that if there are
+#' repeats between the`matchingvars_id`s and the `subsetcells_id`s, you can paste
+#' "00" before the `subsetcells_id`s to ensure they are unique from the
+#' `matchingvars_id`s. Defaults to NULL.
 #'
 #' @param matches data frame output from the \code{\link{multivarmatch}}
 #' function.
+#'
+#' @param quality_name character. Name of the column in the `matches` data frame
+#' that contains the matching quality variable to use to evaluate matching
+#' "matching_quality" or "matching_quality_secondary".
+#' Defaults to "matching_quality"
 #'
 #' @param subset_in_target boolean. Indicates if Subset cells have been selected
 #' from Target cells using \code{\link{kpoints}} function
@@ -565,7 +606,9 @@ sd_barplot <- function(results){
 #' # Look at geographic distances
 #' geodist <- evaluateGeoDist(matches = quals, subsetcells = subsetcells,
 #'                            subset_in_target = TRUE,
-#'                            exclude_poor_matches = TRUE, matching_distance = 1.5,
+#'                            quality_name = "matching_quality",
+#'                            exclude_poor_matches = TRUE,
+#'                            matching_distance = 1.5,
 #'                            longlat = TRUE, raster_template = targetcells[[1]])
 #'
 #'
@@ -579,8 +622,9 @@ sd_barplot <- function(results){
 #' subsetcells <- subsetcells[!duplicated(subsetcells$site_id),]
 #'
 #' # Pull out matching variables only, with site_id that identifies unique climate
-#' subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84",
-#' names(matchingvars)[4:9])]
+#' subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84","bioclim_01",
+#' "bioclim_04","bioclim_09","bioclim_12",
+#' "bioclim_15","bioclim_18")]
 #'
 #' # Ensure that site_id will be values unique to subsetcells
 #' subsetcells$site_id <- paste0("00",subsetcells$site_id)
@@ -593,12 +637,16 @@ sd_barplot <- function(results){
 #'
 #' # Look at geographic distances
 #' geodist <- evaluateGeoDist(matches = quals, subsetcells = subsetcells,
-#'                            subsetcells_id = 'site_id', subset_in_target = FALSE,
-#'                            exclude_poor_matches = TRUE, matching_distance = 1.5,
-#'                            longlat = TRUE, raster_template = targetcells[[1]])
+#'                            subsetcells_id = 'site_id',
+#'                            subset_in_target = FALSE,
+#'                            exclude_poor_matches = TRUE,
+#'                            matching_distance = 1.5,
+#'                            longlat = TRUE, quality_name = "matching_quality",
+#'                            raster_template = targetcells[[1]])
 
 evaluateGeoDist <- function(matches, subsetcells, subsetcells_id = 'site_id',
-                            subset_in_target = TRUE,exclude_poor_matches = TRUE,
+                            subset_in_target = TRUE,quality_name = "matching_quality",
+                            exclude_poor_matches = TRUE,
                             matching_distance = 1.5, longlat = T, raster_template = NULL,
                             map_distances = TRUE, map_neighbor_distances = TRUE,
                             which_distance = "both",saverasters = FALSE,
@@ -681,8 +729,8 @@ evaluateGeoDist <- function(matches, subsetcells, subsetcells_id = 'site_id',
     # 1&2 of target cell
   if (subset_in_target){
     if (exclude_poor_matches){
-      pts3 <- cbind(matches[matches$matching_quality <= matching_distance,c(1,2)],
-                    matches[as.character(as.numeric(matches$subset_cell)),][matches$matching_quality <= matching_distance,c(1,2)])
+      pts3 <- cbind(matches[matches[,quality_name] <= matching_distance,c(1,2)],
+                    matches[as.character(as.numeric(matches$subset_cell)),][matches[,quality_name] <= matching_distance,c(1,2)])
     } else if (!exclude_poor_matches){
       pts3 <- cbind(matches[,c(1,2)],
                     matches[as.character(as.numeric(matches$subset_cell)),c(1,2)])
@@ -690,8 +738,8 @@ evaluateGeoDist <- function(matches, subsetcells, subsetcells_id = 'site_id',
   } else if (!subset_in_target){
     rownames(subsetcells) = subsetcells[,subsetcells_id]
     if (exclude_poor_matches){
-      pts3 <- cbind(matches[matches$matching_quality <= matching_distance,c(1,2)],
-                    subsetcells[as.character(as.numeric(matches$subset_cell)),][matches$matching_quality <= matching_distance,c(2,3)])
+      pts3 <- cbind(matches[matches[,quality_name] <= matching_distance,c(1,2)],
+                    subsetcells[as.character(as.numeric(matches$subset_cell)),][matches[,quality_name] <= matching_distance,c(2,3)])
     } else if (!exclude_poor_matches){
       pts3 <- cbind(matches[,c(1,2)],
                     subsetcells[as.character(as.numeric(matches$subset_cell)),c(2,3)])
@@ -748,7 +796,7 @@ evaluateGeoDist <- function(matches, subsetcells, subsetcells_id = 'site_id',
     cols <- c("#fff7bc","#fee391","#fec44f","#fe9929","#ec7014","#cc4c02","#993404","#662506")
 
     # set breaks
-    bks <- c(0, 6, 12, 18, 36, 72, 144, 288, round(max(distkm)))
+    bks <- c(0, 6, 12, 18, 36, 72, 144, 288, ceiling(max(distkm, na.rm = T)))
 
     # Make figure
     legendPlot(r, bks = bks, cols = cols, thisVariable = "Mean neighbor distance (km)")

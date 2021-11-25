@@ -80,7 +80,7 @@ legendPlot <- function(x = NULL, thisVariable = names(x)[1], round_dec = 0,
   axis(side = 1, pos = 7, at = seq(min(axisat),max(axisat), length.out = length(bks)),
        cex.axis = 0.9, labels = round(bks,round_dec))
   } else if (matchingQ){
-    legend("top" , legend = c("0 to 0.5","0.5 to 1","1 to 1.5","1.5 to 5.5"), fill = cols,
+    legend("top" , legend = c("0 to 0.5","0.5 to 1","1 to 1.5",paste0("1.5 to ",ceiling(max(bks)))), fill = cols,
            bty = "n", cex = 1, ncol = 4, x.intersp = 0.5)
   }
 }
