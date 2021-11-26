@@ -288,7 +288,7 @@ Please also refer to the `secondaryMatching` documentation.
 
 * `reference_treatment` Character, but should be composed only of numbers. Designates the reference treatment identifier that will be pasted onto the `subsetcells_id` as a decimal to generate unique identifiers for each treatment. The combination of the `subsetcells_id` and `reference_treatment` should be able to be converted to numeric. For example, if `subsetcells_id`s are of the form 10001 and the `reference_treatment` is '1', the resulting id would be 10001.1. Default value is '1'.
 
-* `other_treatments` A data frame containing the secondary variables for "other" treatments that are the same across all **subset cells** (e.g., a set of soil types that are simulated for each site in our example). The columns should correspond to the `secondarvars` and the rownames will designate the treatment identifiers that will be pasted onto the `subsetcells_id` to generate unique identifiers for each treatment. For example, see our table of [treatment types](#soil-types-used-in simulation).
+* `other_treatments` A data frame containing the secondary variables for "other" treatments that are the same across all **subset cells** (e.g., a set of soil types that are simulated for each site in our example). The columns should correspond to the `secondarvars` and the rownames will designate the treatment identifiers that will be pasted onto the `subsetcells_id` to generate unique identifiers for each treatment. For example, see our table of [treatment types](#soil-types-used-in-simulation).
 
 **Note:** the function below does not specify several additional arguments that are left as default values. These include:
 

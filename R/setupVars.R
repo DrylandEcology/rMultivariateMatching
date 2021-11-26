@@ -3,17 +3,17 @@
 #' Prepare data frame of potential matching variables for Target cells from
 #' raster files
 #'
-#' @param x RasterStack that covers the area of interest and includes all potential
-#' matching variables. Large datasets may be difficult to handle if memory is
-#' limited and it may work better to run the function for several RasterStacks
-#' (removing previous RasterStacks before reading in the next one) and combine
-#' the output into one final data frame. Note: rasters must all have the same
-#' extent, resolution, and crs.
+#' @param x `RasterStack` that covers the area of interest and includes all
+#' potential matching variables. Large datasets may be difficult to handle if
+#' memory is limited and it may work better to run the function for several
+#' `RasterStacks`(removing previous `RasterStack`s before reading in the next one)
+#' and combine the output into one final data frame. Note: rasters must all have
+#' the same extent, resolution, and crs.
 #'
-#' @return data frame with a 'cellnumbers' column (these are unique values for each
-#' cell in the rasters used as input and will be used as unique identifiers for
-#' the Target cells in other functions), x and y coordinates, and values for each
-#' of the rasters in the RasterStack. The rownames correspond to the 'cellnumbers'
+#' @return data frame with a 'cellnumbers' column (these are unique values for
+#' each cell in the rasters used as input and will be used as unique identifiers
+#' for the Target cells in other functions), x and y coordinates, and values for
+#' each of the rasters in the `RasterStack`. The rownames correspond to the 'cellnumbers'
 #' column.
 #'
 #' @author Rachel R. Renne

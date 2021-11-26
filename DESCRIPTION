@@ -7,14 +7,16 @@ Authors@R:
            role = c("aut", "cre"),
            email = "rachel.renne@yale.edu",
            comment = c(ORCID = "0000-0002-6798-9533"))
-Description: Simulation models are valuable tools for estimating ecosystem structure and 
-    function under various climatic and environmental conditions and disturbance regimes, but
-    computational requirements can restrict the number of feasible simulations. Thus, simulation 
-    models are often run at coarse scales or for representative points and these results 
-    can be difficult to use in decision-making, particularly in topographically complex regions.
-    We present methods for interpolating multivariate and time series simulation output to 
-    high resolution maps. This package includes tools for site selection, interpolation of complex
-    multivariate and timeseries data to high-resolution maps, and estimation of interpolation errors.
+Description: Simulation models are valuable tools for estimating ecosystem 
+    structure and function under various climatic and environmental conditions 
+    and disturbance regimes, but computational requirements can restrict the 
+    number of feasible simulations. Thus, simulation models are often run at 
+    coarse scales or for representative points and these results can be difficult 
+    to use in decision-making.We present cost-effective methods for interpolating 
+    multivariate and time series simulation output to high resolution maps. This 
+    package includes tools for site selection, interpolation of complex 
+    multivariate and timeseries data to high-resolution maps, and estimation of 
+    matching and interpolation errors.
 License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true
