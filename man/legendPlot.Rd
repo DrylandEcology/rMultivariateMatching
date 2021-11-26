@@ -10,7 +10,7 @@ legendPlot(
   round_dec = 0,
   cols = NULL,
   bks = NULL,
-  addpoints = NULL,
+  addpoints = FALSE,
   matchingQ = FALSE
 )
 }
@@ -29,6 +29,12 @@ yellow to dark brown through 8 distinct colors.}
 \item{bks}{vector of breaks to use in designating which values get assigned to
 each color in \code{cols}. Must have one more element than \code{cols}. Unless \code{bks} are
 designated, this vector will be calculated internally from \code{cols}.}
+
+\item{addpoints}{boolean. Indicates whether the locations of subset cells
+should be added to the map as points. Defaults to FALSE.}
+
+\item{matchingQ}{boolean. Indicates whether the map to be plotted is of
+matching quality. Defaults to FALSE.}
 }
 \value{
 a plot of the raster with a legend.
@@ -39,5 +45,10 @@ Plots a raster with binned colors and adds a legend below the image.
 \examples{
 # Load targetcells data for Target Cells
 data(targetcells)
+
+# Plot the raster with a legend
 legendPlot(targetcells[[1]])
+}
+\author{
+Rachel R. Renne
 }

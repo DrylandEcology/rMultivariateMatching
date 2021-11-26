@@ -9,10 +9,10 @@
 #'
 #' @param secondaryvars data frame generated using \code{\link{makeInputdata}},
 #' or a subset of such a data frame, and/or formatted such that: column 1 and
-#' rownames are 'cellnumbers' extracted using the \code{\link{raster::extract}}
+#' rownames are 'cellnumbers' extracted using the \code{\link[raster]{extract}}
 #' function, columns 2 and 3 correspond to x and y coordinates, and additional
 #' columns correspond to a secondary set of matching variables extracted using
-#' the \code{\link{raster::rasterToPoints}} function. These data represent
+#' the \code{\link[raster]{rasterToPoints}} function. These data represent
 #' Target cells.
 #'
 #' @param matches data frame. Output returned from \code{\link{multivarmatch}}
@@ -66,7 +66,11 @@
 #' \code{\link{loocv}}.
 #'
 #' @param saveraster boolean. Indicates if raster of matching quality should be
-#' saved to file. Default is FALSE
+#' saved to file. Default is FALSE.
+#'
+#' @param overwrite boolean. Indicates whether \code{\link[raster]{writeRaster}}
+#' should overwrite existing files with the same name in `filepath`. Defaults to
+#' FALSE.
 #'
 #' @param plotraster boolean. Indicates if raster of matching quality should be
 #' saved to file. Default is TRUE.
@@ -83,6 +87,11 @@
 #' this secondary match ('matching_quality_secondary'). Will save a raster of
 #' matching quality if `saveraster` is TRUE and plot a map of matching quality if
 #' `plotraster` is TRUE.
+#'
+#' @author Rachel R. Renne
+#'
+#' @importFrom stats na.omit
+#' @importFrom stats complete.cases
 #'
 #' @examples
 #' # Load targetcells data for Target Cells (from rMultivariateMatchingAlgorithms package)

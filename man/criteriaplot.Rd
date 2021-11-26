@@ -9,7 +9,7 @@ criteriaplot(x, criteria_list)
 \arguments{
 \item{x}{a list of results from the \code{\link{choose_criteria}} function.}
 
-\item{criteria_list.}{A list of matching criteria tested in the
+\item{criteria_list}{A list of matching criteria tested in the
 \code{\link{choose_criteria}} function.}
 }
 \value{
@@ -22,5 +22,8 @@ of matching criteria that were tested in the \code{\link{choose_criteria}}
 function.
 }
 \examples{
-See \code{\link{choose_criteria}}.
+# See choose_criteria function documentation.
+}
+\author{
+Rachel R. Renne
 }

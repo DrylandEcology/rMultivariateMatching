@@ -6,7 +6,10 @@
 \usage{
 evaluateMatching(
   allvars = NULL,
+  subsetcells = NULL,
   matches = NULL,
+  secondarymatch = FALSE,
+  quality_name = "matching_quality",
   matchingvars_id = "cellnumbers",
   subsetcells_id = NULL,
   subset_in_target = TRUE,
@@ -17,33 +20,11 @@ evaluateMatching(
 \arguments{
 \item{allvars}{data frame generated using \code{\link{makeInputdata}} or
 formatted such that: column 1 and rownames are 'cellnumbers' extracted using the
-\code{\link[raster-extract]{raster::extract()}} function, columns 2 and 3
-correspond to x and y coordinates, and additional columns correspond to various
-variables (which can include matching variables) that have been extracted to
-points using the \code{\link[raster-rasterToPoints]{raster::rasterToPoints()}}
-function. These data represent Target cells (and may also represent Subset
-cells if \code{subset_in_target} is TRUE).}
-
-\item{matches}{data frame output from the \code{\link{matchingquality}}
-function.}
-
-\item{matchingvars_id}{character or numeric. Refers to the column in
-\code{matchingvars}that provides the unique identifiers for target cells. Defaults
-to "cellnumbers", which is the unique ID column created by \code{\link{makeInputdata}}.}
-
-\item{subsetcells_id}{character or numeric. Refers to the column in
-\code{subsetcells}that provides the unique identifiers for target cells. Defaults
-to NULL.}
-
-\item{subset_in_target}{boolean. Indicates if Subset cells have been selected
-from Target cells using \code{\link{kpoints}} function}
-
-\item{matching_distance}{numeric. Gives the maximum allowable matching quality
-value (weighted Euclidean distance) between Target and Subset cells. Default
-value is 1.5.}
-
-\item{plot_diffs}{boolean. Indicates whether a barplot of differences should
-be displayed.}
+\code{\link[raster]{extract}} function, columns 2 and 3 correspond to x and y
+coordinates, and additional columns correspond to various variables (which can
+include matching variables) that have been extracted to points using the
+\code{\link[raster]{rasterToPoints}} function. These data represent Target
+cells (and may also represent Subset cells if \code{subset_in_target} is TRUE).}
 
 \item{subsetcells}{if \code{subset_in_target} is TRUE, this should be a data frame
 of coordinates (expects coordinates in columns named 'x' and 'y') for Subset
@@ -56,9 +37,38 @@ row names should be unique identifiers (unique means no repeats among all
 row names in targetcells and matchingvars if \code{subset_in_target} is FALSE).
 See \code{subset_in_target}.}
 
-\item{exclude_poor_matches}{boolean. Indicates if Target cells with poor
-matching quality (large weighted Euclidean distance to matched Subset cell)
-should be excluded from calculations. Defaults to TRUE.}
+\item{matches}{data frame output from the \code{\link{multivarmatch}} or
+\code{\link{secondaryMatching}} functions.}
+
+\item{secondarymatch}{boolean. Indicates if the \code{matches} data frame comes
+from the \code{\link{secondaryMatching}} function.}
+
+\item{quality_name}{character. Name of the column in the \code{matches} data frame
+that contains the matching quality variable to use to evaluate matching
+"matching_quality" or "matching_quality_secondary".
+Defaults to "matching_quality"}
+
+\item{matchingvars_id}{character or numeric. Refers to the column in
+\code{matchingvars}that provides the unique identifiers for target cells. Defaults
+to "cellnumbers", which is the unique ID column created by \code{\link{makeInputdata}}.}
+
+\item{subsetcells_id}{character or numeric, but must be composed of numbers
+and convertable to numeric. Refers to the column in \code{subsetcells}that provides
+the unique identifiers for Subset cells. When \code{subset_in_target} is TRUE,
+these ids must be unique from \code{matchingvars_ids}. Note that if there are
+repeats between the\code{matchingvars_id}s and the \code{subsetcells_id}s, you can paste
+"00" before the \code{subsetcells_id}s to ensure they are unique from the
+\code{matchingvars_id}s. Defaults to NULL.}
+
+\item{subset_in_target}{boolean. Indicates if Subset cells have been selected
+from Target cells using \code{\link{kpoints}} function}
+
+\item{matching_distance}{numeric. Gives the maximum allowable matching quality
+value (weighted Euclidean distance) between Target and Subset cells. Default
+value is 1.5.}
+
+\item{plot_diffs}{boolean. Indicates whether a barplot of differences should
+be displayed.}
 }
 \value{
 Data frame of the standard deviation of differences between Target and
@@ -77,43 +87,79 @@ includes variables not used for matching.
 \examples{
 # Load targetcells data for Target Cells (from rMultivariateMatchingAlgorithms package)
 data(targetcells)
+
 # Create data frame of potential matching variables for Target Cells
 allvars <- makeInputdata(targetcells)
+
+# Subset to include only matching variables
+matchingvars <- allvars[,c("cellnumbers","x","y","bioclim_01","bioclim_04",
+"bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+
 # Create vector of matching criteria
 criteria <- c(0.7,42,3.3,66,5.4,18.4)
-results1 <- kpoints(matchingvars,criteria = criteria,klist = 200,n_starts = 1,min_area = 50,iter = 50,raster_template = targetcells[[1]])
 
-# For an example where subset_in_target is TRUE
+# Find solution for k = 200
+# Note: n_starts should be >= 10, it is 1 here to reduce run time.
+results1 <- kpoints(matchingvars,criteria = criteria,
+klist = 200,n_starts = 1,min_area = 50,iter = 50,
+raster_template = targetcells[[1]])
+
+
+###################################
+# First an example where subset_in_target = TRUE
 # Get points from solution to kpoints algorithm
 subsetcells <- results1$solutions[[1]]
+
 # Find matches and calculate matching quality
-quals <- matchingquality(matchingvars, subsetcells, matchingvars_id = "cellnumbers", raster_template = targetcells[[1]], subset_in_target = TRUE)
+quals <- multivarmatch(matchingvars, subsetcells,
+matchingvars_id = "cellnumbers", raster_template = targetcells[[1]],
+subset_in_target = TRUE)
+
 # Run evaluateMatching
 sddiffs <- evaluateMatching(allvars = allvars, matches = quals,
                             matchingvars_id = "cellnumbers",
+                            secondarymatch = FALSE,
                             subset_in_target = TRUE, matching_distance = 1.5,
                             plot_diffs = TRUE)
 
-
-# For example with subset_in_target = FALSE
+###################################
+# Now an example where subset_in_target is FALSE
 # Get points from solution to kpoints algorithm
 data(subsetcells)
-# Remove duplicates (representing cells with same climate but different soils--
-# we want to match on climate only)
+
+# Remove duplicates (representing cells with same climate but different
+# soils--we want to match on climate only)
 subsetcells <- subsetcells[!duplicated(subsetcells$site_id),]
+
 # Pull out matching variables only, with site_id that identifies unique climate
-subsetcells1 <- subsetcells[,c("site_id","X_WGS84","Y_WGS84",names(matchingvars)[4:9])]
+subsetcells1 <- subsetcells[,c("site_id","X_WGS84","Y_WGS84","bioclim_01",
+"bioclim_04","bioclim_09","bioclim_12",
+"bioclim_15","bioclim_18")]
+
 # Ensure that site_id will be values unique to subsetcells
 subsetcells1$site_id <- paste0("00",subsetcells$site_id)
+
 # Find matches and calculate matching quality
-quals <- matchingquality(matchingvars, subsetcells=subsetcells1, matchingvars_id = "cellnumbers",subsetcells_id = "site_id",
-                         raster_templat = targetcells[[1]], subset_in_target = FALSE)
+quals <- multivarmatch(matchingvars, subsetcells=subsetcells1,
+matchingvars_id = "cellnumbers",subsetcells_id = "site_id",
+raster_templat = targetcells[[1]], subset_in_target = FALSE)
+
 # Get all variables for Subset cells now:
-subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84",names(allvars)[4:22])]
+subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84",
+names(allvars)[4:22])]
 
 # Run evaluateMatching
-sddiffs <- evaluateMatching(allvars = allvars[,c(1:22)], matches = quals,
-                            matchingvars_id = "cellnumbers", subsetcells_id = "site_id",
-                            subset_in_target = FALSE, matching_distance = 1.5,
+sddiffs <- evaluateMatching(allvars = allvars[,c(1:22)],
+                            subsetcells = subsetcells,
+                            secondarymatch = TRUE,
+                            quality_name = "matching_quality",
+                            matches = quals,
+                            matchingvars_id = "cellnumbers",
+                            subsetcells_id = "site_id",
+                            subset_in_target = FALSE,
+                            matching_distance = 1.5,
                             plot_diffs = TRUE)
+}
+\author{
+Rachel R. Renne
 }

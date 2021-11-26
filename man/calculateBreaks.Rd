@@ -11,13 +11,13 @@ calculateBreaks(x, n_cols)
 
 \item{n_cols}{the number of colors for the legend. Takes input from
 \code{\link{legendPlot}}}
-
-\item{thisVariable}{character. The name of the variable in the raster. Defaults
-to the name of the raster.}
 }
 \value{
 a vector of breaks for the legend.
 }
 \description{
 Creates equal sized bins for the legend and display of the raster.
+}
+\author{
+Rachel R. Renne
 }

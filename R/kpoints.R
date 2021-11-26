@@ -5,11 +5,10 @@
 #' area using a set of matching variables to determine similarity among sites.
 #'
 #' @param matchingvars data frame generated using \code{\link{makeInputdata}} or formatted
-#' such that: rownames are 'cellnumbers' extracted using the
-#' \code{\link[raster-extract]{raster::extract()}}
+#' such that: rownames are 'cellnumbers' extracted using the \code{\link[raster]{extract}}
 #' function, columns 2 and 3 correspond to x and y coordinates, and additional
 #' columns correspond to potential matching variables extracted using the
-#' \code{\link[raster-rasterToPoints]{raster::rasterToPoints()}} function. Note that the 'cellnumbers'
+#' \code{\link[raster]{rasterToPoints}} function. Note that the 'cellnumbers'
 #' column must be present (and correspond to the cellnumbers of the raster used
 #' for `raster_template` for the \code{\link{kpoints}} function to work.
 #'
@@ -36,7 +35,7 @@
 #' a larger number (e.g., 100) should be used. Default value is 10.
 #'
 #' @param raster_template one of the raster layers used for input data.
-#' See \code{\link[raster-area]{raster::area()}}.
+#' See \code{\link[raster]{area}}.
 #'
 #' @param verify_stop boolean. Indicates whether the algorithm should display
 #' figures to evaluate stopping criteria. Displays a plot of areal coverage vs
@@ -50,8 +49,8 @@
 #' * `solutions` A data frame of the final solution of `k` Subset cells.
 #' Rownames correspond to the cellnumbers, and the 'x' and 'y' coordinates of
 #' the cells are included.
-#' * `solution_areas` The area (in $km^2$) represented by the Subset cells.
-#' * `totalarea` The area of the entire study area (in $km^2$).
+#' * `solution_areas` The area (in km2) represented by the Subset cells.
+#' * `totalarea` The area of the entire study area (in km2).
 #' * `klist` The number of Subset cells (`k`) selected by the `kpoints` function.
 #' * `iter` This records the value used in the `kpoints` function for finding
 #' the solution.
@@ -63,7 +62,17 @@
 #' the solution.
 #'
 #'
+#' @author Rachel R. Renne
+#'
+#' @importFrom stats sd
+#' @importFrom graphics par
+#' @importFrom graphics lines
+#' @importFrom grDevices rainbow
+#' @importFrom utils write.csv
+#'
+#'
 #' @export
+#'
 #' @examples
 #' # Load targetcells data for Target Cells
 #' data(targetcells)
@@ -173,7 +182,7 @@ kpoints <- function(matchingvars,criteria = 1,klist = 200,min_area = 50,
                           as.numeric(abs(stdvars2[as.character(stdvars2[,ncol(stdvars2)]),2+cv]-stdvars[,2+cv]) <= 1))
         }
       sum6 <- apply(coverage,1, sum)
-      area_history[i] <- round(sum(extract(areas, as.numeric(rownames(stdvars[sum6 == 6,])))))
+      area_history[i] <- round(sum(raster::extract(areas, as.numeric(rownames(stdvars[sum6 == 6,])))))
       print(paste0("For iteration ",i," with ", k," cells, we cover ", area_history[i]," km2 (",round(area_history[i]/totalarea*100),"%)."))
       group_hist <- cbind(cell_numbers[t(neighbors)], cell_numbers)
       point_history[[i]] <- centers
@@ -283,6 +292,10 @@ return(results)
 #'
 #' @return Plot of the proportion of the study area covered for each value of k,
 #' or if only one value of k was used, reports coverage for that solution.
+#'
+#' @author Rachel R. Renne
+#'
+#' @importFrom graphics par
 #'
 #' @examples
 #' # Load targetcells data for Target Cells

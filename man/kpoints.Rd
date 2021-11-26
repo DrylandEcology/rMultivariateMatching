@@ -18,11 +18,10 @@ kpoints(
 }
 \arguments{
 \item{matchingvars}{data frame generated using \code{\link{makeInputdata}} or formatted
-such that: rownames are 'cellnumbers' extracted using the
-\code{\link[raster-extract]{raster::extract()}}
+such that: rownames are 'cellnumbers' extracted using the \code{\link[raster]{extract}}
 function, columns 2 and 3 correspond to x and y coordinates, and additional
 columns correspond to potential matching variables extracted using the
-\code{\link[raster-rasterToPoints]{raster::rasterToPoints()}} function. Note that the 'cellnumbers'
+\code{\link[raster]{rasterToPoints}} function. Note that the 'cellnumbers'
 column must be present (and correspond to the cellnumbers of the raster used
 for \code{raster_template} for the \code{\link{kpoints}} function to work.}
 
@@ -49,7 +48,7 @@ algorithm will stop. This parameter prevents kpoints from searching indefinitely
 solution. Default value is 50.}
 
 \item{raster_template}{one of the raster layers used for input data.
-See \code{\link[raster-area]{raster::area()}}.}
+See \code{\link[raster]{area}}.}
 
 \item{verify_stop}{boolean. Indicates whether the algorithm should display
 figures to evaluate stopping criteria. Displays a plot of areal coverage vs
@@ -59,7 +58,23 @@ iteration for each of n_starts. Default is FALSE.}
 sites.}
 }
 \value{
-
+A list, including:
+\itemize{
+\item \code{solutions} A data frame of the final solution of \code{k} Subset cells.
+Rownames correspond to the cellnumbers, and the 'x' and 'y' coordinates of
+the cells are included.
+\item \code{solution_areas} The area (in km2) represented by the Subset cells.
+\item \code{totalarea} The area of the entire study area (in km2).
+\item \code{klist} The number of Subset cells (\code{k}) selected by the \code{kpoints} function.
+\item \code{iter} This records the value used in the \code{kpoints} function for finding
+the solution.
+\item \code{n_starts} This records the value used in the \code{kpoints} function for finding
+the solution.
+\item \code{criteria} This records the values used in the \code{kpoints} function for finding
+the solution.
+\item \code{min_area} This records the value used in the \code{kpoints} function for finding
+the solution.
+}
 }
 \description{
 Determine a number (k) of points that maximize the areal coverage of a study
@@ -68,19 +83,23 @@ area using a set of matching variables to determine similarity among sites.
 \examples{
 # Load targetcells data for Target Cells
 data(targetcells)
-# Create data frame of potential matching variables for Target Cells
-y <- makeInputdata(targetcells)
-data(targetcells)
+
 # Create data frame of potential matching variables for Target Cells
 allvars <- makeInputdata(targetcells)
+
 # Restrict data to matching variables of interest
 matchingvars <- allvars[,c("cellnumbers","x","y","bioclim_01","bioclim_04",
 "bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+
 # Create vector of matching criteria
 criteria <- c(0.7,42,3.3,66,5.4,18.4)
 
 # Verify stopping criteria for 200 points
+# Note: n_starts should be >= 10, it is 1 here to reduce run time.
 results1 <- kpoints(matchingvars,criteria = criteria,klist = 200,
 n_starts = 1,min_area = 50,iter = 50,
 raster_template = targetcells[[1]], verify_stop = TRUE,savebest = FALSE)
+}
+\author{
+Rachel R. Renne
 }

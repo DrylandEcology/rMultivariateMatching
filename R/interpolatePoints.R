@@ -44,6 +44,7 @@
 #'
 #' @return Raster files of interpolated output variables.
 #'
+#' @author Rachel R. Renne
 #'
 #' @examples
 #' # Load targetcells data for Target Cells
@@ -54,7 +55,7 @@
 #' \
 #' # Subset to include only matching variables
 #' matchingvars <- allvars[,c("cellnumbers","x","y","bioclim_01","bioclim_04",
-#'  "bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+#'                        "bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
 #'
 #' # Create vector of matching criteria
 #' criteria <- c(0.7,42,3.3,66,5.4,18.4)
@@ -77,8 +78,10 @@
 #' # Create toy data set of "output variables"
 #' # There are really just climate variables from the 'targetcells' rasters,
 #' # but we will treat them as output variables to illustrate the method
-#' output_results <- allvars[rownames(subsetcells),c("cellnumbers","bioclim_02","bioclim_03","bioclim_16","bioclim_17")]
-
+#' output_results <- allvars[rownames(subsetcells),
+#'                          c("cellnumbers","bioclim_02","bioclim_03",
+#'                          "bioclim_16","bioclim_17")]
+#'
 #' # Interpolate simulation output to rasters
 #' interpolatePoints(matches = quals, output_results = output_results,
 #'                   exclude_poor_matches = TRUE,
@@ -105,8 +108,8 @@
 #'
 #' # Pull out matching variables only, with site_id that identifies unique climate
 #' subsetcells1 <- subsetcells[,c("site_id","X_WGS84","Y_WGS84","bioclim_01",
-#' "bioclim_04","bioclim_09","bioclim_12",
-#' "bioclim_15","bioclim_18")]
+#'                            "bioclim_04","bioclim_09","bioclim_12",
+#'                            "bioclim_15","bioclim_18")]
 #'
 #' # Ensure that site_id will be values unique to subsetcells
 #' subsetcells1$site_id <- paste0("00",subsetcells$site_id)

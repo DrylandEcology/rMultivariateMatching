@@ -91,6 +91,8 @@
 #' matching error for each output variable.
 #'
 #'
+#' @author Rachel R. Renne
+#'
 #' @examples
 #' ########################
 #' # First, an example where secondarymatch = FALSE
@@ -259,10 +261,16 @@ loocv <- function(matchingvars, secondaryvars, output_results = NULL,
 #'
 #' @param loocv_output a data frame produced by the \code{\link{loocv}} function.
 #'
+#' @param first_output_column numeric. The column number of the first column in
+#' the `loocv_output` data frame that contains loocv differences in output
+#' variables (should usually be 6 or 8 for one- and two-step matching).
+#'
 #'
 #' @return a named vector where items are the estimated matching error for each
 #' output variable calculated using leave-one-out cross validation of the
 #' Subset cells (simulated sites).
+#'
+#' @author Rachel R. Renne
 #'
 #'
 #' @examples

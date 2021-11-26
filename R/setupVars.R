@@ -16,15 +16,17 @@
 #' of the rasters in the RasterStack. The rownames correspond to the 'cellnumbers'
 #' column.
 #'
+#' @author Rachel R. Renne
+#'
 #'
 #' @examples
 #' # Load targetcells data for Target Cells
 #' data(targetcells)
+#'
 #' # Create data frame of potential matching variables for Target Cells
 #' allvars <- makeInputdata(targetcells)
 #'
 
-# Function to format rasters of potential matching variables for Target Cells
 makeInputdata <- function(x){
   if (sum(grep("raster", class(x), ignore.case = TRUE)) < 1){
     stop("Incorrect inputs, x must be a raster.")
@@ -52,10 +54,9 @@ makeInputdata <- function(x){
 #'
 #' @param matchingvars data frame created using \code{\link{makeInputdata}} or
 #' formatted such that: rownames are 'cellnumbers' extracted using the
-#' \code{\link[raster:extract]{raster::extract()}} function, columns 2 and 3
-#' correspond to x and y coordinates, and additional columns correspond to
-#' potential matching variables extracted using the
-#' \code{\link[raster:rasterToPoints]{raster::rasterToPoints()}} function.
+#' \code{\link[raster]{extract}} function, columns 2 and 3 correspond to x and y
+#' coordinates, and additional columns correspond to potential matching variables
+#' extracted using the \code{\link[raster]{rasterToPoints}} function.
 #'
 #' @param criteria_list list of matching criteria to test in the \code{\link{kpoints}}
 #' function. Each item in the list should be a vector of values (possible matching
@@ -65,9 +66,8 @@ makeInputdata <- function(x){
 #' function. Default value is 200.
 #'
 #' @param raster_template one of the raster layers used for input data.
-#' See \code{\link[raster:area]{raster::area()}}. Note that 'cellnumbers'
-#' column must be present for \code{\link{kpoints}} function to work within this
-#' function.
+#' See \code{\link[raster]{area}}. Note that 'cellnumbers' column must be present
+#' for \code{\link{kpoints}} function to work within this function.
 #'
 #' @param plot_coverage boolean. Indicates whether the algorithm should display
 #' a barplot of the coverage for each set of criteria. Default is TRUE.
@@ -75,7 +75,7 @@ makeInputdata <- function(x){
 #' @param subset_in_target boolean. Indicates if Subset cells have been selected
 #' from Target cells using \code{\link{kpoints}} function
 #'
-#' #' @param subsetcells data frame. Passed to \code{\link{multivarmatch}} function
+#' @param subsetcells data frame. Passed to \code{\link{multivarmatch}} function
 #' if `subset_in_target` is FALSE. This should be a data frame of subset
 #' cells with column names corresponding exactly to those in `matchingvars` and
 #' row names should be unique identifiers.
@@ -88,37 +88,46 @@ makeInputdata <- function(x){
 #' and convertable to numeric. Refers to the column in `subsetcells`that provides
 #' the unique identifiers for Subset cells. When `subset_in_target` is TRUE,
 #' these ids must be unique from `matchingvars_ids`. Note that if there are
-#' repeats between the`matchingvars_id`s and the `subsetcells_id`s, you can paste
+#' repeats between the `matchingvars_id`s and the `subsetcells_id`s, you can paste
 #' "00" before the `subsetcells_id`s to ensure they are unique from the
 #' `matchingvars_id`s. Defaults to "site_id".
 #'
-#' @param matching_distance Gives the maximum allowable matching quality
-#' value (weighted Euclidean distance) between Target and Subset cells, when
+#' @param matching_distance Gives the maximum allowable matching quality value
+#' (weighted Euclidean distance) between Target and Subset cells, when
 #' `subset_in_target` is FALSE. Default value is 1 so that output will be
 #' comparable to output from `choose_criteria` when `subset_in_target` is TRUE.
 #'
 #' @param ... accepts additional parameters to \code{\link{kpoints}} function.
 #'
-#' @return
+#' @return The output from the `choose_criteria` function is a named list where
+#' the first item ('totalarea') reports the total area in km2 of the Target cells
+#' and the second item ('solution_areas') reports the area represented
+#' (Euclidean distance of weighted matching variables <= 1 between Target and
+#' matched subset cells) for each set of matching criteria.
+#'
+#' @author Rachel R. Renne
+#'
+#' @export
 #'
 #' @examples
 #' # Load targetcells data for Target Cells
 #' data(targetcells)
+#'
 #' # Create data frame of potential matching variables for Target Cells
 #' allvars <- makeInputdata(targetcells)
 #'
 #' # Restrict data to matching variables of interest
 #' matchingvars <- allvars[,c("cellnumbers","x","y","bioclim_01","bioclim_04",
-#' "bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+#'                       "bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
 #'
 #' # Create list of matching criteria to choose:
 #' # Look at 2.5%, 5%, & 10% of range and standard deviation for each variable
 #' range2.5pct <- apply(matchingvars[,4:ncol(matchingvars)],2,
-#' function(x){(max(x)-min(x))*0.025})
+#'                      function(x){(max(x)-min(x))*0.025})
 #' range5pct <- apply(matchingvars[,4:ncol(matchingvars)],2,
-#' function(x){(max(x)-min(x))*0.05})
+#'                      function(x){(max(x)-min(x))*0.05})
 #' range10pct <- apply(matchingvars[,4:ncol(matchingvars)],2,
-#' function(x){(max(x)-min(x))*0.1})
+#'                      function(x){(max(x)-min(x))*0.1})
 #' stddev <- apply(matchingvars[,4:ncol(matchingvars)],2,sd)
 #'
 #' # Create a list of criteria
@@ -129,8 +138,9 @@ makeInputdata <- function(x){
 #' # Compare coverage with various criteria
 #' # Note: n_starts should be >= 10, it is 1 here to reduce run time.
 #' results2 <- choose_criteria(matchingvars, criteria_list = criteria_list,
-#' n_starts = 1, k = 200, raster_template = targetcells[[1]],
-#' subset_in_target = TRUE, plot_coverage = TRUE)
+#'                             n_starts = 1, k = 200,
+#'                             raster_template = targetcells[[1]],
+#'                             subset_in_target = TRUE, plot_coverage = TRUE)
 #'
 #' ###################################
 #' # Now an example where subset_in_target is FALSE
@@ -143,8 +153,8 @@ makeInputdata <- function(x){
 #'
 #' # Pull out matching variables only, with site_id that identifies unique climate
 #' subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84","bioclim_01",
-#' "bioclim_04","bioclim_09","bioclim_12",
-#' "bioclim_15","bioclim_18")]
+#'                            "bioclim_04","bioclim_09","bioclim_12",
+#'                            "bioclim_15","bioclim_18")]
 #'
 #' # Ensure that site_id will be values unique to subsetcells
 #' subsetcells$site_id <- paste0("00",subsetcells$site_id)
@@ -195,7 +205,9 @@ choose_criteria <- function(matchingvars = NULL, criteria_list = NULL,
     criteria_results[["totalarea"]] <- round(sum(raster::extract(areas, as.numeric(row.names(matchingvars)))))
     for (i in 1:length(criteria_list)){
       # Find matches and calculate matching quality
-      quals <- multivarmatch(matchingvars, subsetcells, criteria = criteria_list[[i]],
+      quals <- multivarmatch(matchingvars = matchingvars,
+                             subsetcells = subsetcells,
+                             criteria = criteria_list[[i]],
                              matchingvars_id = matchingvars_id,
                              subsetcells_id = subsetcells_id,
                              raster_template = raster_template,
@@ -223,16 +235,21 @@ choose_criteria <- function(matchingvars = NULL, criteria_list = NULL,
 #'
 #' @param x a list of results from the \code{\link{choose_criteria}} function.
 #'
-#' @param criteria_list. A list of matching criteria tested in the
+#' @param criteria_list A list of matching criteria tested in the
 #' \code{\link{choose_criteria}} function.
 #'
 #'
 #' @return a barplot showing the proportion of the study area represented by
 #' different combinations of matching criteria.
 #'
+#' @author Rachel R. Renne
+#'
+#' @importFrom graphics par
+#' @importFrom graphics barplot
+#' @importFrom graphics box
 #'
 #' @examples
-#' See \code{\link{choose_criteria}}.
+#' # See choose_criteria function documentation.
 
 
 criteriaplot <- function(x, criteria_list){

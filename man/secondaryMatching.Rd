@@ -13,34 +13,36 @@ secondaryMatching(
   subsetcells_id = NULL,
   criteria = 1,
   other_treatments = NULL,
+  is_loocv = FALSE,
   raster_template,
   subset_in_target = FALSE,
   saveraster = FALSE,
   plotraster = TRUE,
   filepath = getwd(),
+  overwrite = FALSE,
   ...
 )
 }
 \arguments{
 \item{secondaryvars}{data frame generated using \code{\link{makeInputdata}},
 or a subset of such a data frame, and/or formatted such that: column 1 and
-rownames are 'cellnumbers' extracted using the \code{\link{raster::extract}}
+rownames are 'cellnumbers' extracted using the \code{\link[raster]{extract}}
 function, columns 2 and 3 correspond to x and y coordinates, and additional
 columns correspond to a secondary set of matching variables extracted using
-the \code{\link{raster::rasterToPoints}} function. These data represent
+the \code{\link[raster]{rasterToPoints}} function. These data represent
 Target cells.}
 
-\item{matches}{data frame. Output returned from \code{\link{matchingquality}}
+\item{matches}{data frame. Output returned from \code{\link{multivarmatch}}
 using primary matching variables (e.g., climate variables).}
 
 \item{subsetcells}{data frame with columns that correspond to those in
 \code{secondaryvars}. Currently, there is no functionality for \code{subset_in_target} =
 TRUE, so subset cells should represent a separate set of simulated (Subset)
-cells. This function is designed to handle experimental design in which there
-is a "reference" treatment that is site-specific (e.g., site-specific soils)
-and a series of "other" treatments that are the same across all Subset cells.
-Thus, the subsetcells data frame should contain secondary variables that
-correspond to the site-specific treatment only.}
+cells. This function is designed to handle an experimental design in which there
+is a "reference" treatment (which can either be the same for all Subset cells or
+site-specific (e.g., site-specific soils)) and a series of "other" treatments
+that are the same across all Subset cells. Thus, the \code{subsetcells} data frame
+should contain secondary variables that correspond to only one treatment.}
 
 \item{secondaryvars_id}{character or numeric. Refers to the column in
 \code{matchingvars}that provides the unique identifiers for Target cells. Defaults
@@ -50,12 +52,16 @@ to "cellnumbers", which is the unique ID column created by \code{\link{makeInput
 treatment identifier that will be pasted onto the \code{subsetcells_id} to generate
 unique identifiers for each treatment. Default value is "1".}
 
-\item{subsetcells_id}{character or numeric. Refers to the column in
-\code{subsetcells}that provides the unique identifiers for Target cells. Defaults
-to NULL.}
+\item{subsetcells_id}{character or numeric, but must be composed of numbers
+and convertable to numeric. Refers to the column in \code{subsetcells}that provides
+the unique identifiers for Subset cells. When \code{subset_in_target} is TRUE,
+these ids must be unique from \code{matchingvars_ids}. Note that if there are
+repeats between the\code{matchingvars_id}s and the \code{subsetcells_id}s, you can paste
+"00" before the \code{subsetcells_id}s to ensure they are unique from the
+\code{matchingvars_id}s. Defaults to NULL.}
 
 \item{criteria}{single value or vector of length equal to the number of
-secondary variables, where values corresponds to the matching criterion for
+secondary variables, where values correspond to the matching criterion for
 each secondary variable \code{secondaryvars}. If a single value, this will be used
 as matching criteria for all variables. Default value is 1, corresponding to
 using raw data for matching.}
@@ -67,13 +73,17 @@ secondary variable names and the rownames will designate the treatment identifie
 that will be pasted onto the \code{subsetcells_id} to generate unique identifiers
 for each treatment.}
 
+\item{is_loocv}{boolean. Indicates whether the function is being used as part
+of leave-one-out cross-validation. Usually only passed to this function from
+\code{\link{loocv}}.}
+
 \item{raster_template}{one of the raster layers used for input data.}
 
 \item{subset_in_target}{boolean. Defaults to FALSE. There is no functionality
 for TRUE at this time.}
 
 \item{saveraster}{boolean. Indicates if raster of matching quality should be
-saved to file. Default is FALSE}
+saved to file. Default is FALSE.}
 
 \item{plotraster}{boolean. Indicates if raster of matching quality should be
 saved to file. Default is TRUE.}
@@ -81,14 +91,18 @@ saved to file. Default is TRUE.}
 \item{filepath}{provides path for location where raster will be saved. Defaults
 to working directory.}
 
+\item{overwrite}{boolean. Indicates whether \code{\link[raster]{writeRaster}}
+should overwrite existing files with the same name in \code{filepath}. Defaults to
+FALSE.}
+
 \item{...}{additional parameters to pass to legendPlot.}
 }
 \value{
 Data frame of Target cells with coordinates ('x','y'), cellnumber of
 Target cell ('target_cell'), unique id of matched Subset cell ('subset_cell'),
-matching quality ('matching_quality'), unique id of Subset cell matched with
+matching quality ('matching_quality'), unique id of the Subset cell matched with
 secondary matching criteria ('subset_cell_secondary'), and matching quality of
-this secondary match ('matching_quality_secondary). Will save a raster of
+this secondary match ('matching_quality_secondary'). Will save a raster of
 matching quality if \code{saveraster} is TRUE and plot a map of matching quality if
 \code{plotraster} is TRUE.
 }
@@ -102,36 +116,51 @@ a case where experimental (simulation) design includes multiple "treatments"
 \examples{
 # Load targetcells data for Target Cells (from rMultivariateMatchingAlgorithms package)
 data(targetcells)
+
 #Create data frame of potential matching variables for Target Cells
 allvars <- makeInputdata(targetcells)
-# Restrict data to matching variables of interest
-matchingvars <- allvars[,c("cellnumbers","x","y","bioclim_01","bioclim_04","bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
-# Create vector of matching criteria
 
-# For example with subset_in_target = FALSE (subset_in_target = TRUE is not
-# functional at this time)
+# Restrict data to matching variables of interest
+matchingvars <- allvars[,c("cellnumbers","x","y","bioclim_01",
+"bioclim_04","bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+
+# Create vector of matching criteria
+criteria <- c(0.7,42,3.3,66,5.4,18.4)
+
+###################################
+# For example with subset_in_target = FALSE
+# (There is no functionality for subset_in_target = TRUE at this time)
 
 # Get points from solution to kpoints algorithm
 data(subsetcells)
+
 # Remove duplicates (representing cells with same climate but different soils--
 # we want to match on climate only)
 subsetcells <- subsetcells[!duplicated(subsetcells$site_id),]
+
 # Pull out matching variables only, with site_id that identifies unique climate
-subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84",names(matchingvars)[4:9])]
+subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84","bioclim_01",
+"bioclim_04","bioclim_09","bioclim_12",
+"bioclim_15","bioclim_18")]
+
 # Ensure that site_id will be values unique to subsetcells
 subsetcells$site_id <- paste0("00",subsetcells$site_id)
+
 # Find matches and calculate matching quality
-quals <- matchingquality(matchingvars, subsetcells=subsetcells, matchingvars_id = "cellnumbers",subsetcells_id = "site_id",
-                         raster_template = targetcells[[1]], subset_in_target = FALSE)
+quals <- multivarmatch(matchingvars, subsetcells=subsetcells,
+matchingvars_id = "cellnumbers",subsetcells_id = "site_id",
+raster_template = targetcells[[1]], subset_in_target = FALSE)
 
 # Subset to include only secondaryvars
 secondaryvars <- allvars[,c("cellnumbers","x","y","sand","clay")]
 
 # Bring in secondary id variable from subsetcells
 data(subsetcells)
+
 # Remove duplicates (keeping only site-specific soils with site_ids ending
 # in ".1").
 subsetcells <- subsetcells[!duplicated(subsetcells$site_id),]
+
 # Pull out matching variables only, with site_id that identifies unique climate
 subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84",
                               "sand","clay"),]
@@ -141,9 +170,11 @@ subsetcells$clay <- subsetcells$clay*100
 
 # Make sure subsetcell ids are unique
 subsetcells$site_id <- paste0("00",subsetcells$site_id)
+
 # Bring in "other" treatments
 data(setsoiltypes)
 other_treatments = setsoiltypes
+
 # Calculate criteria
 criteria = c((max(secondaryvars$sand,na.rm = T)-min(secondaryvars$sand,na.rm = T))/10,
              (max(secondaryvars$clay,na.rm = T)-min(secondaryvars$clay,na.rm = T))/10)
@@ -155,4 +186,7 @@ quals2 <- secondaryMatching(secondaryvars = secondaryvars, matches = quals,
                             raster_template = targetcells[[1]],
                             reference_treatment = "1",
                             other_treatments = other_treatments)
+}
+\author{
+Rachel R. Renne
 }

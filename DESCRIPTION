@@ -1,8 +1,8 @@
 Package: rMultivariateMatching
-Title: Multivariate matching for interpolation of mulidimensional datasets
+Title: Multivariate matching for site selection and interpolation using multi-dimensional datasets
 Version: 1.0
 Authors@R: 
-    person(given = "Rachel",
+    person(given = "Rachel R.",
            family = "Renne",
            role = c("aut", "cre"),
            email = "rachel.renne@yale.edu",
@@ -27,6 +27,7 @@ Suggests:
 Config/testthat/edition: 3
 Imports: 
     raster,
+    sp,
     distances
 Depends: 
     R (>= 2.10)

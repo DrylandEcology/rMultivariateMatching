@@ -8,9 +8,9 @@
 #'
 #' @param matchingvars data frame generated using \code{\link{makeInputdata}} or
 #' formatted such that: column 1 and rownames are 'cellnumbers' extracted using the
-#' \code{\link[raster-extract]{raster::extract()}} function, columns 2 and 3 correspond to x and y
+#' \code{\link[raster]{extract}} function, columns 2 and 3 correspond to x and y
 #' coordinates, and additional columns correspond to potential matching variables
-#' extracted using the \code{\link[raster-rasterToPoints]{raster::rasterToPoints()}} function. These data
+#' extracted using the \code{\link[raster]{rasterToPoints}} function. These data
 #' represent Target cells.
 #'
 #' @param subsetcells if `subset_in_target` is TRUE, this should be a data frame
@@ -56,6 +56,10 @@
 #' @param saveraster boolean. Indicates if raster of matching quality should be
 #' saved to file.
 #'
+#' @param overwrite boolean. Indicates whether \code{\link[raster]{writeRaster}}
+#' should overwrite existing files with the same name in `filepath`. Defaults to
+#' FALSE.
+#'
 #' @param filepath provides path for location where raster will be saved. Defaults
 #' to working directory.
 #'
@@ -66,6 +70,10 @@
 #' and matching quality ('matching_quality'). Will save a raster of matching
 #' quality if `saveraster` is TRUE and plot a map of matching quality if
 #' `plotraster` is TRUE.
+#'
+#' @param ... additional arguments to pass to \code{\link{legendPlot}}.
+#'
+#' @author Rachel R. Renne
 #'
 #' @examples
 #' # Load targetcells data for Target Cells
@@ -122,11 +130,12 @@
 #'                          subset_in_target = FALSE, addpoints = FALSE)
 
 
-multivarmatch <- function(matchingvars,subsetcells,matchingvars_id = "cellnumbers",
-                            subsetcells_id = NULL, criteria = 1, n_neighbors = 1,
-                            raster_template,subset_in_target = TRUE,
-                            saveraster=FALSE,plotraster=TRUE,filepath=getwd(),
-                            overwrite = FALSE, ...){
+multivarmatch <- function(matchingvars=NULL,subsetcells=NULL,
+                          matchingvars_id = "cellnumbers",
+                          subsetcells_id = NULL, criteria = 1, n_neighbors = 1,
+                          raster_template,subset_in_target = TRUE,
+                          saveraster=FALSE,plotraster=TRUE,addpoints = FALSE,
+                          filepath=getwd(),overwrite = FALSE, ...){
   # If no standardization or if standardization is the same for all matching variables
   if (length(criteria)==1){
     criteria = rep(criteria, (ncol(matchingvars)-3))
@@ -239,7 +248,8 @@ multivarmatch <- function(matchingvars,subsetcells,matchingvars_id = "cellnumber
   cols = rev(c("#d7191c","#fdae61","#abd9e9","#2c7bb6"))
   bks = c(0,0.5,1,1.5,5)
   thisVariable = "Matching quality"
-  legendPlot(r, bks = bks, cols = cols, thisVariable = "Matching quality",matchingQ = TRUE, ...)
+  legendPlot(r, bks = bks, cols = cols, thisVariable = "Matching quality",
+             matchingQ = TRUE, addpoints = addpoints, ...)
   }
   }
   return(qual)
@@ -256,12 +266,11 @@ multivarmatch <- function(matchingvars,subsetcells,matchingvars_id = "cellnumber
 #'
 #' @param allvars data frame generated using \code{\link{makeInputdata}} or
 #' formatted such that: column 1 and rownames are 'cellnumbers' extracted using the
-#' \code{\link[raster-extract]{raster::extract()}} function, columns 2 and 3
-#' correspond to x and y coordinates, and additional columns correspond to various
-#' variables (which can include matching variables) that have been extracted to
-#' points using the \code{\link[raster-rasterToPoints]{raster::rasterToPoints()}}
-#' function. These data represent Target cells (and may also represent Subset
-#' cells if `subset_in_target` is TRUE).
+#' \code{\link[raster]{extract}} function, columns 2 and 3 correspond to x and y
+#' coordinates, and additional columns correspond to various variables (which can
+#' include matching variables) that have been extracted to points using the
+#' \code{\link[raster]{rasterToPoints}} function. These data represent Target
+#' cells (and may also represent Subset cells if `subset_in_target` is TRUE).
 #'
 #' @param subsetcells if `subset_in_target` is TRUE, this should be a data frame
 #' of coordinates (expects coordinates in columns named 'x' and 'y') for Subset
@@ -300,10 +309,6 @@ multivarmatch <- function(matchingvars,subsetcells,matchingvars_id = "cellnumber
 #' @param subset_in_target boolean. Indicates if Subset cells have been selected
 #' from Target cells using \code{\link{kpoints}} function
 #'
-#' @param exclude_poor_matches boolean. Indicates if Target cells with poor
-#' matching quality (large weighted Euclidean distance to matched Subset cell)
-#' should be excluded from calculations. Defaults to TRUE.
-#'
 #' @param matching_distance numeric. Gives the maximum allowable matching quality
 #' value (weighted Euclidean distance) between Target and Subset cells. Default
 #' value is 1.5.
@@ -318,6 +323,11 @@ multivarmatch <- function(matchingvars,subsetcells,matchingvars_id = "cellnumber
 #' standard deviation of differences between Target and Subset cells for only those
 #' Target cells with matching quality <= `matching_distance`. Units are the same
 #' as the units for each variable in `allvars`.
+#'
+#' @author Rachel R. Renne
+#'
+#' @importFrom stats complete.cases
+#' @importFrom stats sd
 #'
 #' @examples
 #' # Load targetcells data for Target Cells (from rMultivariateMatchingAlgorithms package)
@@ -363,7 +373,7 @@ multivarmatch <- function(matchingvars,subsetcells,matchingvars_id = "cellnumber
 #' data(subsetcells)
 #'
 #' # Remove duplicates (representing cells with same climate but different
-#' soils--we want to match on climate only)
+#' # soils--we want to match on climate only)
 #' subsetcells <- subsetcells[!duplicated(subsetcells$site_id),]
 #'
 #' # Pull out matching variables only, with site_id that identifies unique climate
@@ -479,6 +489,12 @@ evaluateMatching <- function(allvars = NULL, subsetcells = NULL,
 #' @return a horizonal barplot of the standard deviation of differences between
 #' target and matched subset cells.
 #'
+#' @author Rachel R. Renne
+#'
+#' @importFrom graphics par
+#' @importFrom graphics barplot
+#' @importFrom graphics legend
+#' @importFrom graphics box
 #'
 #' @examples
 #'sd_barplot(results)
@@ -517,10 +533,6 @@ sd_barplot <- function(results){
 #' row names in targetcells and matchingvars if `subset_in_target` is FALSE).
 #' See `subset_in_target`.
 #'
-#' @param matchingvars_id character or numeric. Refers to the column in
-#' `matchingvars`that provides the unique identifiers for target cells. Defaults
-#' to "cellnumbers", which is the unique ID column created by \code{\link{makeInputdata}}.
-#'
 #' @param subsetcells_id character or numeric, but must be composed of numbers
 #' and convertable to numeric. Refers to the column in `subsetcells`that provides
 #' the unique identifiers for Subset cells. When `subset_in_target` is TRUE,
@@ -534,8 +546,12 @@ sd_barplot <- function(results){
 #'
 #' @param quality_name character. Name of the column in the `matches` data frame
 #' that contains the matching quality variable to use to evaluate matching
-#' "matching_quality" or "matching_quality_secondary".
-#' Defaults to "matching_quality"
+#' 'matching_quality' or 'matching_quality_secondary'. Defaults to
+#' 'matching_quality'.
+#'
+#' @param exclude_poor_matches boolean. Indicates if poor matches (with weighted
+#' Euclidean distance <= `matching_distance`) should be excluded from geographic
+#' distance calculation. Defaults to TRUE.
 #'
 #' @param subset_in_target boolean. Indicates if Subset cells have been selected
 #' from Target cells using \code{\link{kpoints}} function
@@ -544,7 +560,7 @@ sd_barplot <- function(results){
 #' value (weighted Euclidean distance) between Target and Subset cells. Default
 #' value is 1.5.
 #'
-#' @param longlat boolean. Pass to function in \code{\link[raster-pointDistance]{raster::pointDistance()}}.
+#' @param longlat boolean. Pass to function in \code{\link[raster]{pointDistance}}.
 #' Indicates if the coordinates are in longitude and latitude format for calculating
 #' distances between points. Default value is TRUE and coordinates need to be
 #' provided in this format.
@@ -567,6 +583,10 @@ sd_barplot <- function(results){
 #' @param saverasters boolean. Indicates whether to save rasters of the calculated
 #' distance metrics. Defaults to FALSE.
 #'
+#' @param overwrite boolean. Indicates whether \code{\link[raster]{writeRaster}}
+#' should overwrite existing files with the same name in `filepath`. Defaults to
+#' FALSE.
+#'
 #' @param filepath provides path for location where raster will be saved. Defaults
 #' to working directory.
 #'
@@ -578,6 +598,8 @@ sd_barplot <- function(results){
 #' Target cells ('avgdistance_to_neighbors'). The first column and the rownames
 #' correspond to the unique identifiers for the Target cells, and columns 2 and 3
 #' correspond to the 'x' and 'y' coordinates of the Target cells.
+#'
+#' @author Rachel R. Renne
 #'
 #' @examples
 #' # Load targetcells data for Target Cells
@@ -601,7 +623,10 @@ sd_barplot <- function(results){
 #' subsetcells <- results1$solutions[[1]]
 #'
 #' # Find matches and calculate matching quality
-#' quals <- multivarmatch(matchingvars, subsetcells, matchingvars_id = "cellnumbers", raster_template = targetcells[[1]], subset_in_target = TRUE)
+#' quals <- multivarmatch(matchingvars, subsetcells,
+#'                        matchingvars_id = "cellnumbers",
+#'                        raster_template = targetcells[[1]],
+#'                        subset_in_target = TRUE)
 #'
 #' # Look at geographic distances
 #' geodist <- evaluateGeoDist(matches = quals, subsetcells = subsetcells,
@@ -609,7 +634,8 @@ sd_barplot <- function(results){
 #'                            quality_name = "matching_quality",
 #'                            exclude_poor_matches = TRUE,
 #'                            matching_distance = 1.5,
-#'                            longlat = TRUE, raster_template = targetcells[[1]])
+#'                            longlat = TRUE,
+#'                            raster_template = targetcells[[1]])
 #'
 #'
 #' ###################################
@@ -618,7 +644,7 @@ sd_barplot <- function(results){
 #' data(subsetcells)
 #'
 #' # Remove duplicates (representing cells with same climate but different
-#' soils--we want to match on climate only)
+#' # soils--we want to match on climate only)
 #' subsetcells <- subsetcells[!duplicated(subsetcells$site_id),]
 #'
 #' # Pull out matching variables only, with site_id that identifies unique climate
@@ -645,10 +671,13 @@ sd_barplot <- function(results){
 #'                            raster_template = targetcells[[1]])
 
 evaluateGeoDist <- function(matches, subsetcells, subsetcells_id = 'site_id',
-                            subset_in_target = TRUE,quality_name = "matching_quality",
+                            subset_in_target = TRUE,
+                            quality_name = "matching_quality",
                             exclude_poor_matches = TRUE,
-                            matching_distance = 1.5, longlat = T, raster_template = NULL,
-                            map_distances = TRUE, map_neighbor_distances = TRUE,
+                            matching_distance = 1.5, longlat = TRUE,
+                            raster_template = NULL,
+                            map_distances = TRUE,
+                            map_neighbor_distances = TRUE,
                             which_distance = "both",saverasters = FALSE,
                             filepath = getwd(), overwrite = FALSE){
   if (which_distance == "simple" | which_distance == "both"){

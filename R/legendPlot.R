@@ -18,7 +18,24 @@
 #' each color in `cols`. Must have one more element than `cols`. Unless `bks` are
 #' designated, this vector will be calculated internally from `cols`.
 #'
+#' @param addpoints boolean. Indicates whether the locations of subset cells
+#' should be added to the map as points. Defaults to FALSE.
+#'
+#' @param matchingQ boolean. Indicates whether the map to be plotted is of
+#' matching quality. Defaults to FALSE.
+#'
 #' @return a plot of the raster with a legend.
+#'
+#' @author Rachel R. Renne
+#'
+#' @importFrom graphics layout
+#' @importFrom graphics par
+#' @importFrom graphics points
+#' @importFrom graphics box
+#' @importFrom graphics mtext
+#' @importFrom graphics polygon
+#' @importFrom graphics axis
+#' @importFrom graphics legend
 #'
 #'
 #' @examples
@@ -29,7 +46,8 @@
 #' legendPlot(targetcells[[1]])
 
 legendPlot <- function(x = NULL, thisVariable = names(x)[1], round_dec = 0,
-                       cols = NULL, bks = NULL, addpoints = NULL, matchingQ = FALSE){
+                       cols = NULL, bks = NULL, addpoints = FALSE,
+                       matchingQ = FALSE){
   if (is.null(x)){
     stop("Verify inputs: 'x' is missing.")
   }
@@ -60,11 +78,9 @@ legendPlot <- function(x = NULL, thisVariable = names(x)[1], round_dec = 0,
                 breaks = bks,
                 xlab = "", ylab ="",
                 bty = "n", xaxt = "n",yaxt="n")
-  if (!is.null(addpoints)){
     if (addpoints){
     points(subsetcells[,"y"] ~ subsetcells[,"x"], pch = 16, cex = 1, col = "black")
     }
-  }
   box()
   par(mar=c(0,0.5,0.2,0.5))
   plot(1:10~1, col = "white", xaxt = "n", yaxt = "n", bty = "n")
@@ -93,18 +109,19 @@ legendPlot <- function(x = NULL, thisVariable = names(x)[1], round_dec = 0,
 #'
 #' @param x raster.
 #'
-#' @param thisVariable character. The name of the variable in the raster. Defaults
-#' to the name of the raster.
-#'
 #' @param n_cols the number of colors for the legend. Takes input from
 #' \code{\link{legendPlot}}
 #'
 #' @return a vector of breaks for the legend.
 #'
+#' @importFrom stats na.omit
+#'
+#' @author Rachel R. Renne
+#'
 
 calculateBreaks <- function(x, n_cols){
-  minx = min(na.omit(values(x)))
-  maxx = max(na.omit(values(x)))
+  minx = min(na.omit(raster::values(x)))
+  maxx = max(na.omit(raster::values(x)))
   rangex = maxx-minx
   bks = minx
   for (cx in 2:(n_cols)){

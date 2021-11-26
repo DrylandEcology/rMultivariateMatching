@@ -28,7 +28,11 @@ raster files
 \examples{
 # Load targetcells data for Target Cells
 data(targetcells)
+
 # Create data frame of potential matching variables for Target Cells
 allvars <- makeInputdata(targetcells)
 
+}
+\author{
+Rachel R. Renne
 }

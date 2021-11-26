@@ -9,19 +9,21 @@ evaluateGeoDist(
   subsetcells,
   subsetcells_id = "site_id",
   subset_in_target = TRUE,
+  quality_name = "matching_quality",
   exclude_poor_matches = TRUE,
   matching_distance = 1.5,
-  longlat = T,
+  longlat = TRUE,
   raster_template = NULL,
   map_distances = TRUE,
   map_neighbor_distances = TRUE,
   which_distance = "both",
   saverasters = FALSE,
-  filepath = getwd()
+  filepath = getwd(),
+  overwrite = FALSE
 )
 }
 \arguments{
-\item{matches}{data frame output from the \code{\link{matchingquality}}
+\item{matches}{data frame output from the \code{\link{multivarmatch}}
 function.}
 
 \item{subsetcells}{if \code{subset_in_target} is TRUE, this should be a data frame
@@ -35,18 +37,31 @@ row names should be unique identifiers (unique means no repeats among all
 row names in targetcells and matchingvars if \code{subset_in_target} is FALSE).
 See \code{subset_in_target}.}
 
-\item{subsetcells_id}{character or numeric. Refers to the column in
-\code{subsetcells}that provides the unique identifiers for target cells. Defaults
-to NULL.}
+\item{subsetcells_id}{character or numeric, but must be composed of numbers
+and convertable to numeric. Refers to the column in \code{subsetcells}that provides
+the unique identifiers for Subset cells. When \code{subset_in_target} is TRUE,
+these ids must be unique from \code{matchingvars_ids}. Note that if there are
+repeats between the\code{matchingvars_id}s and the \code{subsetcells_id}s, you can paste
+"00" before the \code{subsetcells_id}s to ensure they are unique from the
+\code{matchingvars_id}s. Defaults to NULL.}
 
 \item{subset_in_target}{boolean. Indicates if Subset cells have been selected
 from Target cells using \code{\link{kpoints}} function}
+
+\item{quality_name}{character. Name of the column in the \code{matches} data frame
+that contains the matching quality variable to use to evaluate matching
+'matching_quality' or 'matching_quality_secondary'. Defaults to
+'matching_quality'.}
+
+\item{exclude_poor_matches}{boolean. Indicates if poor matches (with weighted
+Euclidean distance <= \code{matching_distance}) should be excluded from geographic
+distance calculation. Defaults to TRUE.}
 
 \item{matching_distance}{numeric. Gives the maximum allowable matching quality
 value (weighted Euclidean distance) between Target and Subset cells. Default
 value is 1.5.}
 
-\item{longlat}{boolean. Pass to function in \code{\link[raster-pointDistance]{raster::pointDistance()}}.
+\item{longlat}{boolean. Pass to function in \code{\link[raster]{pointDistance}}.
 Indicates if the coordinates are in longitude and latitude format for calculating
 distances between points. Default value is TRUE and coordinates need to be
 provided in this format.}
@@ -74,18 +89,17 @@ distance metrics. Defaults to FALSE.}
 \item{filepath}{provides path for location where raster will be saved. Defaults
 to working directory.}
 
-\item{matchingvars_id}{character or numeric. Refers to the column in
-\code{matchingvars}that provides the unique identifiers for target cells. Defaults
-to "cellnumbers", which is the unique ID column created by \code{\link{makeInputdata}}.}
+\item{overwrite}{boolean. Indicates whether \code{\link[raster]{writeRaster}}
+should overwrite existing files with the same name in \code{filepath}. Defaults to
+FALSE.}
 }
 \value{
-Data frame of the standard deviation of differences between Target and
-their matched Subset cells for all variables supplied in \code{allvars} data frame.
-The first row corresponds to the standard deviation of differences between
-Target and Subset cells for all cells and the second row corresponds to the
-standard deviation of differences between Target and Subset cells for only those
-Target cells with matching quality <= \code{matching_distance}. Units are the same
-as the units for each variable in \code{allvars}.
+Data frame with the distance between Target and matched Subset cells
+('target_to_subset_distance') and the average distance between the Subset cell
+matched to each Target cell and the Subset cells matched to the eight adjacent
+Target cells ('avgdistance_to_neighbors'). The first column and the rownames
+correspond to the unique identifiers for the Target cells, and columns 2 and 3
+correspond to the 'x' and 'y' coordinates of the Target cells.
 }
 \description{
 Calculate 1) distance between target and matched subset cells and 2) distance
@@ -93,42 +107,74 @@ between the Subset cells matched to each Target cell and the Subset cells
 matched to the eight adjacent neighbors of that Target cell.
 }
 \examples{
-# Load targetcells data for Target Cells (from rMultivariateMatchingAlgorithms package)
+# Load targetcells data for Target Cells
 data(targetcells)
+
 # Create data frame of potential matching variables for Target Cells
 allvars <- makeInputdata(targetcells)
+
 #' # Create vector of matching criteria
 criteria <- c(0.7,42,3.3,66,5.4,18.4)
-results1 <- kpoints(matchingvars,criteria = criteria,klist = 200,n_starts = 1,min_area = 50,iter = 50,raster_template = targetcells[[1]])
-# For an example where subset_in_target is TRUE
+
+ # Find solution for k = 200
+# Note: n_starts should be >= 10, it is 1 here to reduce run time.
+results1 <- kpoints(matchingvars,criteria = criteria,klist = 200,
+n_starts = 1,min_area = 50,iter = 50,raster_template = targetcells[[1]])
+
+
+###################################
+# First an example where subset_in_target = TRUE
 # Get points from solution to kpoints algorithm
 subsetcells <- results1$solutions[[1]]
+
 # Find matches and calculate matching quality
-quals <- matchingquality(matchingvars, subsetcells, matchingvars_id = "cellnumbers", raster_template = targetcells[[1]], subset_in_target = TRUE)
+quals <- multivarmatch(matchingvars, subsetcells,
+                       matchingvars_id = "cellnumbers",
+                       raster_template = targetcells[[1]],
+                       subset_in_target = TRUE)
+
 # Look at geographic distances
 geodist <- evaluateGeoDist(matches = quals, subsetcells = subsetcells,
-                           subsetcells_id = 'site_id', subset_in_target = TRUE,
-                           exclude_poor_matches = TRUE, matching_distance = 1.5,
-                           longlat = TRUE, raster_template = targetcells[[1]])
+                           subset_in_target = TRUE,
+                           quality_name = "matching_quality",
+                           exclude_poor_matches = TRUE,
+                           matching_distance = 1.5,
+                           longlat = TRUE,
+                           raster_template = targetcells[[1]])
 
 
-# For example with subset_in_target = FALSE
+###################################
+# Now an example where subset_in_target is FALSE
 # Get points from solution to kpoints algorithm
 data(subsetcells)
-# Remove duplicates (representing cells with same climate but different soils--
-# we want to match on climate only)
+
+# Remove duplicates (representing cells with same climate but different
+# soils--we want to match on climate only)
 subsetcells <- subsetcells[!duplicated(subsetcells$site_id),]
+
 # Pull out matching variables only, with site_id that identifies unique climate
-subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84",names(matchingvars)[4:9])]
+subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84","bioclim_01",
+"bioclim_04","bioclim_09","bioclim_12",
+"bioclim_15","bioclim_18")]
+
 # Ensure that site_id will be values unique to subsetcells
 subsetcells$site_id <- paste0("00",subsetcells$site_id)
+
 # Find matches and calculate matching quality
-quals <- matchingquality(matchingvars, subsetcells=subsetcells, matchingvars_id = "cellnumbers",subsetcells_id = "site_id",
-                         raster_template = targetcells[[1]], subset_in_target = FALSE)
+quals <- multivarmatch(matchingvars, subsetcells=subsetcells,
+matchingvars_id = "cellnumbers",subsetcells_id = "site_id",
+                         raster_template = targetcells[[1]],
+                         subset_in_target = FALSE)
 
 # Look at geographic distances
 geodist <- evaluateGeoDist(matches = quals, subsetcells = subsetcells,
-                           subsetcells_id = 'site_id', subset_in_target = FALSE,
-                           exclude_poor_matches = TRUE, matching_distance = 1.5,
-                           longlat = TRUE, raster_template = targetcells[[1]])
+                           subsetcells_id = 'site_id',
+                           subset_in_target = FALSE,
+                           exclude_poor_matches = TRUE,
+                           matching_distance = 1.5,
+                           longlat = TRUE, quality_name = "matching_quality",
+                           raster_template = targetcells[[1]])
+}
+\author{
+Rachel R. Renne
 }

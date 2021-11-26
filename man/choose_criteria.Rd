@@ -4,9 +4,27 @@
 \alias{choose_criteria}
 \title{Determine matching criteria}
 \usage{
-choose_criteria(criteria_list = NULL, k = 200, plot_coverage = TRUE, ...)
+choose_criteria(
+  matchingvars = NULL,
+  criteria_list = NULL,
+  k = 200,
+  plot_coverage = TRUE,
+  raster_template = NULL,
+  subset_in_target = TRUE,
+  subsetcells = NULL,
+  matchingvars_id = "cellnumbers",
+  subsetcells_id = "site_id",
+  matching_distance = 1,
+  ...
+)
 }
 \arguments{
+\item{matchingvars}{data frame created using \code{\link{makeInputdata}} or
+formatted such that: rownames are 'cellnumbers' extracted using the
+\code{\link[raster]{extract}} function, columns 2 and 3 correspond to x and y
+coordinates, and additional columns correspond to potential matching variables
+extracted using the \code{\link[raster]{rasterToPoints}} function.}
+
 \item{criteria_list}{list of matching criteria to test in the \code{\link{kpoints}}
 function. Each item in the list should be a vector of values (possible matching
 criteria) corresponding to each matching variable.}
@@ -17,22 +35,43 @@ function. Default value is 200.}
 \item{plot_coverage}{boolean. Indicates whether the algorithm should display
 a barplot of the coverage for each set of criteria. Default is TRUE.}
 
-\item{...}{accepts additional parameters to \code{\link{kpoints}} function.}
-
-\item{matchingvars}{data frame created using \code{\link{makeInputdata}} or
-formatted such that: rownames are 'cellnumbers' extracted using the
-\code{\link[raster:extract]{raster::extract()}} function, columns 2 and 3
-correspond to x and y coordinates, and additional columns correspond to
-potential matching variables extracted using the
-\code{\link[raster:rasterToPoints]{raster::rasterToPoints()}} function.}
-
 \item{raster_template}{one of the raster layers used for input data.
-See \code{\link[raster:area]{raster::area()}}. Note that 'cellnumbers'
-column must be present for \code{\link{kpoints}} function to work within this
-function.}
+See \code{\link[raster]{area}}. Note that 'cellnumbers' column must be present
+for \code{\link{kpoints}} function to work within this function.}
+
+\item{subset_in_target}{boolean. Indicates if Subset cells have been selected
+from Target cells using \code{\link{kpoints}} function}
+
+\item{subsetcells}{data frame. Passed to \code{\link{multivarmatch}} function
+if \code{subset_in_target} is FALSE. This should be a data frame of subset
+cells with column names corresponding exactly to those in \code{matchingvars} and
+row names should be unique identifiers.}
+
+\item{matchingvars_id}{character or numeric. Refers to the column in
+\code{matchingvars}that provides the unique identifiers for Target cells. Defaults
+to "cellnumbers", which is the unique ID column created by \code{\link{makeInputdata}}.}
+
+\item{subsetcells_id}{character or numeric, but must be composed of numbers
+and convertable to numeric. Refers to the column in \code{subsetcells}that provides
+the unique identifiers for Subset cells. When \code{subset_in_target} is TRUE,
+these ids must be unique from \code{matchingvars_ids}. Note that if there are
+repeats between the \code{matchingvars_id}s and the \code{subsetcells_id}s, you can paste
+"00" before the \code{subsetcells_id}s to ensure they are unique from the
+\code{matchingvars_id}s. Defaults to "site_id".}
+
+\item{matching_distance}{Gives the maximum allowable matching quality value
+(weighted Euclidean distance) between Target and Subset cells, when
+\code{subset_in_target} is FALSE. Default value is 1 so that output will be
+comparable to output from \code{choose_criteria} when \code{subset_in_target} is TRUE.}
+
+\item{...}{accepts additional parameters to \code{\link{kpoints}} function.}
 }
 \value{
-
+The output from the \code{choose_criteria} function is a named list where
+the first item ('totalarea') reports the total area in km2 of the Target cells
+and the second item ('solution_areas') reports the area represented
+(Euclidean distance of weighted matching variables <= 1 between Target and
+matched subset cells) for each set of matching criteria.
 }
 \description{
 Examine summary statistics of matching variables to determine matching criteria
@@ -40,26 +79,63 @@ Examine summary statistics of matching variables to determine matching criteria
 \examples{
 # Load targetcells data for Target Cells
 data(targetcells)
+
 # Create data frame of potential matching variables for Target Cells
 allvars <- makeInputdata(targetcells)
 
 # Restrict data to matching variables of interest
 matchingvars <- allvars[,c("cellnumbers","x","y","bioclim_01","bioclim_04",
-"bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+                      "bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
 
 # Create list of matching criteria to choose:
 # Look at 2.5\%, 5\%, & 10\% of range and standard deviation for each variable
 range2.5pct <- apply(matchingvars[,4:ncol(matchingvars)],2,
-function(x){(max(x)-min(x))*0.025})
+                     function(x){(max(x)-min(x))*0.025})
 range5pct <- apply(matchingvars[,4:ncol(matchingvars)],2,
-function(x){(max(x)-min(x))*0.05})
+                     function(x){(max(x)-min(x))*0.05})
 range10pct <- apply(matchingvars[,4:ncol(matchingvars)],2,
-function(x){(max(x)-min(x))*0.1})
+                     function(x){(max(x)-min(x))*0.1})
 stddev <- apply(matchingvars[,4:ncol(matchingvars)],2,sd)
+
+# Create a list of criteria
 criteria_list <- list(range2.5pct, range5pct, range10pct, stddev)
 
+###################################
+# First an example where subset_in_target = TRUE
 # Compare coverage with various criteria
+# Note: n_starts should be >= 10, it is 1 here to reduce run time.
 results2 <- choose_criteria(matchingvars, criteria_list = criteria_list,
-n_starts = 1, k = 200, raster_template = targetcells[[1]],
-plot_coverage = TRUE)
+                            n_starts = 1, k = 200,
+                            raster_template = targetcells[[1]],
+                            subset_in_target = TRUE, plot_coverage = TRUE)
+
+###################################
+# Now an example where subset_in_target is FALSE
+# Bring in Subset cell data
+data(subsetcells)
+
+# Remove duplicates (representing cells with same climate but different soils--
+# we want to match on climate only)
+subsetcells <- subsetcells[!duplicated(subsetcells$site_id),]
+
+# Pull out matching variables only, with site_id that identifies unique climate
+subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84","bioclim_01",
+                           "bioclim_04","bioclim_09","bioclim_12",
+                           "bioclim_15","bioclim_18")]
+
+# Ensure that site_id will be values unique to subsetcells
+subsetcells$site_id <- paste0("00",subsetcells$site_id)
+
+# Run choose_criteria function to evaluate different matching criteria
+coverage <- choose_criteria(matchingvars = matchingvars,
+                            criteria_list = criteria_list,
+                            plot_coverage = TRUE,
+                            raster_template = targetcells[[1]],
+                            subset_in_target = FALSE,
+                            subsetcells = subsetcells,
+                            matchingvars_id = "cellnumbers",
+                            subsetcells_id = "site_id")
+}
+\author{
+Rachel R. Renne
 }
