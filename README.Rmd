@@ -34,12 +34,20 @@ You can find examples of the site selection and interpolation methods in print [
 
 ## Installation
 
-TBA
+To install the `rMultivariateMatching` package, please run the following code.
 
-```{r, include = FALSE, eval = FALSE}
+```{r, eval = FALSE}
 # install.packages("devtools")
-devtools::install_github("DrylandEcology/rMultivariateMatching")
+devtools::install_github("DrylandEcology/rMultivariateMatching", build_vignettes = TRUE)
 ```
+
+There are four vignettes (referenced below) that provide step-by-step guides for using the package. You can view these vignettes by running the following code. Click on the 'HTML' links to view each vignette.
+
+```{r, eval = FALSE}
+library(rMultivariateMatching)
+browseVignettes("rMultivariateMatching")
+```
+
 ## Examples
 
 ### Site selection

@@ -40,7 +40,22 @@ print
 
 ## Installation
 
-TBA
+To install the `rMultivariateMatching` package, please run the following
+code.
+
+``` r
+# install.packages("devtools")
+devtools::install_github("DrylandEcology/rMultivariateMatching", build_vignettes = TRUE)
+```
+
+There are four vignettes (referenced below) that provide step-by-step
+guides for using the package. You can view these vignettes by running
+the following code. Click on the ‘HTML’ links to view each vignette.
+
+``` r
+library(rMultivariateMatching)
+browseVignettes("rMultivariateMatching")
+```
 
 ## Examples
 
