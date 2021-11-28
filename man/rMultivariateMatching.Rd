@@ -3,11 +3,12 @@
 \docType{package}
 \name{rMultivariateMatching}
 \alias{rMultivariateMatching}
-\title{rMultivariateMatching: A package that uses multivariate matching to generate high-resolution maps}
+\title{rMultivariateMatching: Multivariate matching for site selection and
+interpolation using multi-dimensional datasets}
 \description{
 The rMultivariateMatching package uses multivariate matching for optimal
-selection of sites for simulation and interpolation of simulation output from
-spatially sparse simulations to high resolution datasets.
+selection of sites for simulation and for interpolation of simulation output
+from spatially sparse simulations to high resolution datasets.
 }
 \section{}{
 NA

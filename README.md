@@ -6,10 +6,10 @@
 <!-- badges: start -->
 <!-- badges: end -->
 
-The goal of rMultivariateMatching is to use multivariate matching for
-cost-effective selection of optimal sites for simulation and
-interpolation of simulation output from spatially sparse simulations to
-high resolution datasets, as described in:
+The goals of rMultivariateMatching are a) to use multivariate matching
+for cost-effective selection of optimal sites for simulation and b) to
+interpolate simulation output from spatially sparse simulations to
+create high-resolution datasets, as described in:
 
 > Renne, R. R., Schlaepfer, D. R., Palmquist, K. A., Lauenroth, W. K., &
 > Bradford, J. B. In preparation. Estimating complex ecological
@@ -40,10 +40,7 @@ print
 
 ## Installation
 
-``` r
-# install.packages("devtools")
-devtools::install_github("DrylandEcology/rMultivariateMatchingAlgorithms")
-```
+TBA
 
 ## Examples
 
@@ -93,7 +90,7 @@ represent areas matched to the sites selected in the current iteration
 shows the proportion of the study area that is represented by the points
 in each iteration.*
 
-<img src="./figures/README-kpoints_animation.gif" width="100%">
+<img src="./man/figures/README-kpoints_animation.gif" width="100%">
 
 ### Interpolation
 
@@ -122,7 +119,7 @@ portion of the soil are dry when soil temperature at 50 cm &gt;5 degrees
 Celsius. Simulation output data used in the interpolation are from
 Bradford et al. (2019).*
 
-<img src="./figures/README-interpolatedoutput_dryprop.png" width="50%">
+<img src="./man/figures/README-interpolatedoutput_dryprop.png" width="50%">
 
 ### Estimation of matching and interpolation errors
 
@@ -133,35 +130,35 @@ In *Renne et al.*, we suggest four methods of evaluating matching:
 *Matching quality for an example using simulated sites from Bradford et
 al. (2019). Values*  ≤ 1 *represent high quality matching.*
 
-<img src="./figures/README-matchingquality_withoutkpoints.png" width="50%">
+<img src="./man/figures/README-matchingquality_withoutkpoints.png" width="50%">
 
 ### 2. Calculate the standard deviation of differences between simulated sites and matched sites for a set of variables relevant to the project
 
 *Standard deviation of differences between simulated and matched sites
 using simulated sites from Bradford et al. (2019).*
 
-<img src="./figures/README-sd_diffs_withoutkpoints.png" width="50%">
+<img src="./man/figures/README-sd_diffs_withoutkpoints.png" width="50%">
 
 ### 3. Calculate geographic distances between matched cells
 
 *Distance (km) between simulated sites and matched sites using simulated
 sites from Bradford et al. (2019).*
 
-<img src="./figures/README-geodistance_withoutkpoints.png" width="50%">
+<img src="./man/figures/README-geodistance_withoutkpoints.png" width="50%">
 
 *Average distance between the simulated site that is matched to a given
 location and the simulated site that is matched to the eight adjacent
 neighbors of that location using simulated sites from Bradford et
 al. (2019).*
 
-<img src="./figures/README-neighbordist_withoutkpoints.png" width="50%">
+<img src="./man/figures/README-neighbordist_withoutkpoints.png" width="50%">
 
 ### 4. Leave-one-out cross-validation
 
 *Errors estimated with leave-one-out cross-validation for six output
 variables from Bradford et al. (2019).*
 
-<img src="./figures/README-cverrors_withoutkpoints.png" width="80%">
+<img src="./man/figures/README-cverrors_withoutkpoints.png" width="80%">
 
 ### Examples of the site selection and interpolation methods in print
 

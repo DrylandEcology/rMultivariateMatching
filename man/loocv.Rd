@@ -120,13 +120,35 @@ data(targetcells)
 # Create data frame of potential matching variables for Target Cells
 allvars <- makeInputdata(targetcells)
 
+# Restrict data to matching variables of interest
+matchingvars <- allvars[,c("cellnumbers","x","y","bioclim_01","bioclim_04",
+                        "bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+
+# Create vector of matching criteria
+criteria <- c(0.7,42,3.3,66,5.4,18.4)
+
+# Create raster template
+raster_template = targetcells[[1]]
+
+# Find solution for k = 200
+# Note: n_starts should be >= 10, it is 1 here to reduce run time.
+results1 <- kpoints(matchingvars,criteria = criteria,klist = 200,
+                    n_starts = 1,min_area = 50,iter = 50,
+                    raster_template = raster_template)
+
+# Get points from solution to kpoints algorithm
+subsetcells <- results1$solutions[[1]]
+
 # Create a mock dataset of output results
 output_results <- allvars[rownames(subsetcells),c("cellnumbers","bioclim_02",
                                                   "bioclim_03","bioclim_16",
                                                   "bioclim_17")]
 
 # Create dataset of matchingvars for subsetcells
-subset_matchingvars <- matchingvars[rownames(subsetcells),-1]
+subset_matchingvars <- allvars[rownames(subsetcells),-1]
+subset_matchingvars <- subset_matchingvars[,c("x","y","bioclim_01","bioclim_04",
+                                              "bioclim_09","bioclim_12",
+                                              "bioclim_15","bioclim_18" )]
 
 # Run leave-one-out cross validation of mock output results
 loocv_results <- loocv(matchingvars = subset_matchingvars,
@@ -137,12 +159,17 @@ loocv_results <- loocv(matchingvars = subset_matchingvars,
 
 ########################
 # Next, an example where secondarymatch = TRUE
+
+# Remove previous subsetcells
+rm(subsetcells)
+
 # Get subsetcells
 data(subsetcells)
 
 # Pull out only matching variables and remove duplicates
 matchingvars <- subsetcells[,c("site_id","X_WGS84","Y_WGS84","bioclim_01",
-"bioclim_04","bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+                            "bioclim_04","bioclim_09","bioclim_12",
+                            "bioclim_15","bioclim_18")]
 
 # Fix names
 names(matchingvars) <- c("cellnumbers","x","y",names(matchingvars)[4:9])
@@ -174,18 +201,21 @@ rownames(secondaryvars) <- secondaryvars$cellnumbers
 data(setsoiltypes)
 other_treatments = setsoiltypes
 
+# Create raster template
+raster_template = targetcells[[1]]
+
 # Set original criteria (from first-step matching)
 criteria1 = c(0.7,42,3.3,66,5.4,18.4)
 
 # Calculate criteria for secondary matching
-criteria2 = c((max(subsetcells$sand,na.rm = T)-
-             min(subsetcells$sand,na.rm = T))/10*100,
-             (max(subsetcells$clay,na.rm = T)-
-             min(subsetcells$clay,na.rm = T))/10*100)
+criteria2 = c((max(subsetcells$sand,na.rm = TRUE)-
+             min(subsetcells$sand,na.rm = TRUE))/10*100,
+             (max(subsetcells$clay,na.rm = TRUE)-
+             min(subsetcells$clay,na.rm = TRUE))/10*100)
 
 # Bring in simulation output results of interest
 output_results = subsetcells[,c("site_ids","Dryprop","CwetWinter",
-"CdrySummer","Cwet8","Dryall","Dryany")]
+                             "CdrySummer","Cwet8","Dryall","Dryany")]
 rownames(output_results) <- output_results$site_ids
 
 # Run leave-one-out cross validation of output results

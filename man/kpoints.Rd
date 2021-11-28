@@ -89,16 +89,20 @@ allvars <- makeInputdata(targetcells)
 
 # Restrict data to matching variables of interest
 matchingvars <- allvars[,c("cellnumbers","x","y","bioclim_01","bioclim_04",
-"bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+                       "bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+
+# Create raster_template
+raster_template <- targetcells[[1]]
 
 # Create vector of matching criteria
 criteria <- c(0.7,42,3.3,66,5.4,18.4)
 
 # Verify stopping criteria for 200 points
 # Note: n_starts should be >= 10, it is 1 here to reduce run time.
-results1 <- kpoints(matchingvars,criteria = criteria,klist = 200,
-n_starts = 1,min_area = 50,iter = 50,
-raster_template = targetcells[[1]], verify_stop = TRUE,savebest = FALSE)
+results1 <- kpoints(matchingvars,criteria = criteria, klist = 200,
+                    n_starts = 1, min_area = 50, iter = 50,
+                    raster_template = raster_template,
+                    verify_stop = TRUE, savebest = FALSE)
 }
 \author{
 Rachel R. Renne

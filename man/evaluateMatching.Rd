@@ -93,7 +93,10 @@ allvars <- makeInputdata(targetcells)
 
 # Subset to include only matching variables
 matchingvars <- allvars[,c("cellnumbers","x","y","bioclim_01","bioclim_04",
-"bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+                        "bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+
+# Create raster_template
+raster_template <- targetcells[[1]]
 
 # Create vector of matching criteria
 criteria <- c(0.7,42,3.3,66,5.4,18.4)
@@ -101,30 +104,35 @@ criteria <- c(0.7,42,3.3,66,5.4,18.4)
 # Find solution for k = 200
 # Note: n_starts should be >= 10, it is 1 here to reduce run time.
 results1 <- kpoints(matchingvars,criteria = criteria,
-klist = 200,n_starts = 1,min_area = 50,iter = 50,
-raster_template = targetcells[[1]])
+                   klist = 200, n_starts = 1, min_area = 50, iter = 50,
+                   raster_template = raster_template)
 
 
 ###################################
 # First an example where subset_in_target = TRUE
+
 # Get points from solution to kpoints algorithm
 subsetcells <- results1$solutions[[1]]
 
 # Find matches and calculate matching quality
 quals <- multivarmatch(matchingvars, subsetcells,
-matchingvars_id = "cellnumbers", raster_template = targetcells[[1]],
-subset_in_target = TRUE)
+                       criteria = criteria,
+                       matchingvars_id = "cellnumbers",
+                       raster_template = raster_template,
+                       subset_in_target = TRUE)
 
 # Run evaluateMatching
 sddiffs <- evaluateMatching(allvars = allvars, matches = quals,
                             matchingvars_id = "cellnumbers",
                             secondarymatch = FALSE,
-                            subset_in_target = TRUE, matching_distance = 1.5,
+                            subset_in_target = TRUE,
+                            matching_distance = 1.5,
                             plot_diffs = TRUE)
 
 ###################################
 # Now an example where subset_in_target is FALSE
-# Get points from solution to kpoints algorithm
+rm(subsetcells)
+# Get subsetcells
 data(subsetcells)
 
 # Remove duplicates (representing cells with same climate but different
@@ -133,25 +141,38 @@ subsetcells <- subsetcells[!duplicated(subsetcells$site_id),]
 
 # Pull out matching variables only, with site_id that identifies unique climate
 subsetcells1 <- subsetcells[,c("site_id","X_WGS84","Y_WGS84","bioclim_01",
-"bioclim_04","bioclim_09","bioclim_12",
-"bioclim_15","bioclim_18")]
+                               "bioclim_04","bioclim_09","bioclim_12",
+                               "bioclim_15","bioclim_18")]
 
 # Ensure that site_id will be values unique to subsetcells
 subsetcells1$site_id <- paste0("00",subsetcells$site_id)
 
 # Find matches and calculate matching quality
-quals <- multivarmatch(matchingvars, subsetcells=subsetcells1,
-matchingvars_id = "cellnumbers",subsetcells_id = "site_id",
-raster_templat = targetcells[[1]], subset_in_target = FALSE)
+quals <- multivarmatch(matchingvars,
+                       subsetcells=subsetcells1,
+                       criteria = criteria,
+                       matchingvars_id = "cellnumbers",
+                       subsetcells_id = "site_id",
+                       raster_templat = raster_template,
+                       subset_in_target = FALSE)
+
+# Remove previous subsetcells
+rm(subsetcells)
+# Get subsetcells
+data(subsetcells)
+
+# Remove duplicates (representing cells with same climate but different
+# soils--we want to match on climate only)
+subsetcells <- subsetcells[!duplicated(subsetcells$site_id),]
 
 # Get all variables for Subset cells now:
 subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84",
-names(allvars)[4:22])]
+                              names(allvars)[4:24])]
 
 # Run evaluateMatching
-sddiffs <- evaluateMatching(allvars = allvars[,c(1:22)],
+sddiffs <- evaluateMatching(allvars = allvars[,c(1:24)],
                             subsetcells = subsetcells,
-                            secondarymatch = TRUE,
+                            secondarymatch = FALSE,
                             quality_name = "matching_quality",
                             matches = quals,
                             matchingvars_id = "cellnumbers",

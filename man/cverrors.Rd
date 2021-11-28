@@ -31,6 +31,25 @@ data(targetcells)
 # Create data frame of potential matching variables for Target Cells
 allvars <- makeInputdata(targetcells)
 
+# Restrict data to matching variables of interest
+matchingvars <- allvars[,c("cellnumbers","x","y","bioclim_01","bioclim_04",
+                        "bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+
+# Create vector of matching criteria
+criteria <- c(0.7,42,3.3,66,5.4,18.4)
+
+# Create raster template
+raster_template = targetcells[[1]]
+
+# Find solution for k = 200
+# Note: n_starts should be >= 10, it is 1 here to reduce run time.
+results1 <- kpoints(matchingvars,criteria = criteria,klist = 200,
+                    n_starts = 1,min_area = 50,iter = 50,
+                    raster_template = raster_template)
+
+# Get points from solution to kpoints algorithm
+subsetcells <- results1$solutions[[1]]
+
 # Create a mock dataset of output results
 output_results <- allvars[rownames(subsetcells),c("cellnumbers","bioclim_02",
                                                   "bioclim_03","bioclim_16",

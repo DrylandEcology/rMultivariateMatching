@@ -17,7 +17,52 @@ target and matched subset cells.
 Plots a horizontal barplot of output from \code{\link{evaluateMatching}}
 }
 \examples{
-sd_barplot(results)
+# Load targetcells data for Target Cells (from rMultivariateMatchingAlgorithms package)
+data(targetcells)
+
+# Create data frame of potential matching variables for Target Cells
+allvars <- makeInputdata(targetcells)
+
+# Subset to include only matching variables
+matchingvars <- allvars[,c("cellnumbers","x","y","bioclim_01","bioclim_04",
+                        "bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+
+# Create raster_template
+raster_template <- targetcells[[1]]
+
+# Create vector of matching criteria
+criteria <- c(0.7,42,3.3,66,5.4,18.4)
+
+# Find solution for k = 200
+# Note: n_starts should be >= 10, it is 1 here to reduce run time.
+results1 <- kpoints(matchingvars,criteria = criteria,
+                   klist = 200, n_starts = 1, min_area = 50, iter = 50,
+                   raster_template = raster_template)
+
+
+###################################
+# First an example where subset_in_target = TRUE
+
+# Get points from solution to kpoints algorithm
+subsetcells <- results1$solutions[[1]]
+
+# Find matches and calculate matching quality
+quals <- multivarmatch(matchingvars, subsetcells,
+                       criteria = criteria,
+                       matchingvars_id = "cellnumbers",
+                       raster_template = raster_template,
+                       subset_in_target = TRUE)
+
+# Run evaluateMatching
+sddiffs <- evaluateMatching(allvars = allvars, matches = quals,
+                            matchingvars_id = "cellnumbers",
+                            secondarymatch = FALSE,
+                            subset_in_target = TRUE,
+                            matching_distance = 1.5,
+                            plot_diffs = FALSE)
+
+# Plot differences
+sd_barplot(sddiffs)
 }
 \author{
 Rachel R. Renne

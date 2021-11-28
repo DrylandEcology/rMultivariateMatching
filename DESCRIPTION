@@ -1,6 +1,6 @@
 Package: rMultivariateMatching
 Title: Multivariate matching for site selection and interpolation using multi-dimensional datasets
-Version: 1.0
+Version: 0.0.0.9000
 Authors@R: 
     person(given = "Rachel R.",
            family = "Renne",

@@ -18,6 +18,7 @@
 #'
 #' @author Rachel R. Renne
 #'
+#' @export
 #'
 #' @examples
 #' # Load targetcells data for Target Cells
@@ -25,7 +26,6 @@
 #'
 #' # Create data frame of potential matching variables for Target Cells
 #' allvars <- makeInputdata(targetcells)
-#'
 
 makeInputdata <- function(x){
   if (sum(grep("raster", class(x), ignore.case = TRUE)) < 1){
@@ -136,10 +136,14 @@ makeInputdata <- function(x){
 #' ###################################
 #' # First an example where subset_in_target = TRUE
 #' # Compare coverage with various criteria
+#'
+#' # Create raster_template
+#' raster_template <- targetcells[[1]]
+#'
 #' # Note: n_starts should be >= 10, it is 1 here to reduce run time.
 #' results2 <- choose_criteria(matchingvars, criteria_list = criteria_list,
 #'                             n_starts = 1, k = 200,
-#'                             raster_template = targetcells[[1]],
+#'                             raster_template = raster_template,
 #'                             subset_in_target = TRUE, plot_coverage = TRUE)
 #'
 #' ###################################
@@ -159,11 +163,14 @@ makeInputdata <- function(x){
 #' # Ensure that site_id will be values unique to subsetcells
 #' subsetcells$site_id <- paste0("00",subsetcells$site_id)
 #'
+#' # Create raster_template
+#' raster_template <- targetcells[[1]]
+#'
 #' # Run choose_criteria function to evaluate different matching criteria
 #' coverage <- choose_criteria(matchingvars = matchingvars,
 #'                             criteria_list = criteria_list,
 #'                             plot_coverage = TRUE,
-#'                             raster_template = targetcells[[1]],
+#'                             raster_template = raster_template,
 #'                             subset_in_target = FALSE,
 #'                             subsetcells = subsetcells,
 #'                             matchingvars_id = "cellnumbers",
@@ -187,7 +194,8 @@ choose_criteria <- function(matchingvars = NULL, criteria_list = NULL,
     print(paste0("Using criteria: ", criteria_list[cr]))
     criteria = criteria_list[[cr]]
     klist = k
-    results1 <- kpoints(matchingvars=matchingvars,criteria,klist=klist,...)
+    results1 <- kpoints(matchingvars=matchingvars,criteria,klist=klist,
+                        raster_template = raster_template, ...)
     criteria_results$solution_areas[cr] <- results1$solution_areas
     criteria_results$totalarea = results1$totalarea
     criteria_results$k = results1$k
@@ -243,6 +251,8 @@ choose_criteria <- function(matchingvars = NULL, criteria_list = NULL,
 #' different combinations of matching criteria.
 #'
 #' @author Rachel R. Renne
+#'
+#' @export
 #'
 #' @importFrom graphics par
 #' @importFrom graphics barplot

@@ -13,6 +13,7 @@ interpolatePoints(
   matching_distance = 1.5,
   raster_template = NULL,
   plotraster = TRUE,
+  saveraster = TRUE,
   filepath = getwd(),
   overwrite = FALSE
 )
@@ -50,6 +51,9 @@ value is 1.5.}
 \item{plotraster}{boolean. Indicates if raster should be plotted to a map.
 Defaults to TRUE.}
 
+\item{saveraster}{boolean. Indicates if a raster should be saved to file.
+Defaults to TRUE.}
+
 \item{filepath}{provides path for location where raster will be saved. Defaults
 to working directory.}
 
@@ -69,10 +73,13 @@ data(targetcells)
 
 # Create data frame of potential matching variables for Target Cells
 allvars <- makeInputdata(targetcells)
-\
+
 # Subset to include only matching variables
 matchingvars <- allvars[,c("cellnumbers","x","y","bioclim_01","bioclim_04",
                        "bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+
+# Create raster_template
+raster_template <- targetcells[[1]]
 
 # Create vector of matching criteria
 criteria <- c(0.7,42,3.3,66,5.4,18.4)
@@ -81,7 +88,7 @@ criteria <- c(0.7,42,3.3,66,5.4,18.4)
 # For an example where subset cells were generated from kpoints function
 # Find solution for k = 200
 results1 <- kpoints(matchingvars,criteria = criteria,klist = 200,n_starts = 1,
-                    min_area = 50,iter = 50,raster_template = targetcells[[1]])
+                    min_area = 50,iter = 50,raster_template = raster_template)
 
 # Get points from solution to kpoints algorithm
 subsetcells <- results1$solutions[[1]]
@@ -89,7 +96,7 @@ subsetcells <- results1$solutions[[1]]
 # Find matches and calculate matching quality
 quals <- multivarmatch(matchingvars, subsetcells, criteria = criteria,
                          matchingvars_id = "cellnumbers",
-                         raster_template = targetcells[[1]],
+                         raster_template = raster_template,
                          subset_in_target = TRUE)
 
 # Create toy data set of "output variables"
@@ -104,16 +111,25 @@ interpolatePoints(matches = quals, output_results = output_results,
                   exclude_poor_matches = TRUE,
                   subset_cell_names = "subset_cell",
                   quality_name = "matching_quality",
-                  matching_distance = 1.5, raster_template = targetcells[[1]],
-                  plotraster = TRUE, filepath = getwd(),
+                  matching_distance = 1.5,
+                  raster_template = raster_template,
+                  plotraster = TRUE,
+                  saveraster = FALSE,
                   overwrite = FALSE)
 
 
 ###################################
+# For example where subset cells were not generated from kpoints function
+# Remove previous subsetcells
+rm(subsetcells)
+
+# Get points from solution to kpoints algorithm
+data(subsetcells)
+
 # Pull results from subsetcells
 output_results <- subsetcells[,c("site_ids","Dryprop","CwetWinter","CdrySummer",
                                  "Cwet8","Dryall","Dryany")]
-rownames(output_results) <- paste0("00",output_results$site_ids)
+rownames(output_results) <- output_results$site_ids
 
 # Remove duplicates (representing cells with same climate but different soils--
 # we want to match on climate only)
@@ -139,6 +155,9 @@ quals <- multivarmatch(matchingvars, subsetcells=subsetcells1,
 # Subset to include only secondaryvars
 secondaryvars <- allvars[,c("cellnumbers","x","y","sand","clay")]
 
+# Remove previous subsetcells
+rm(subsetcells)
+
 # Bring in secondary id variable from subsetcells
 data(subsetcells)
 
@@ -162,16 +181,16 @@ data(setsoiltypes)
 other_treatments = setsoiltypes
 
 # Calculate criteria
-criteria = c((max(secondaryvars$sand,na.rm = T)-
-                 min(secondaryvars$sand,na.rm = T))/10,
-             (max(secondaryvars$clay,na.rm = T)-
-                 min(secondaryvars$clay,na.rm = T))/10)
+criteria = c((max(secondaryvars$sand,na.rm = TRUE)-
+                 min(secondaryvars$sand,na.rm = TRUE))/10,
+             (max(secondaryvars$clay,na.rm = TRUE)-
+                 min(secondaryvars$clay,na.rm = TRUE))/10)
 
 # Run secondary matching on soils data
 quals2 <- secondaryMatching(secondaryvars = secondaryvars, matches = quals,
                             subsetcells=subsetcells,subsetcells_id = "site_id",
                             subset_in_target = FALSE, criteria = criteria,
-                            raster_template = targetcells[[1]],
+                            raster_template = raster_template,
                             reference_treatment = "1",
                             other_treatments = other_treatments)
 
@@ -179,12 +198,12 @@ quals2 <- secondaryMatching(secondaryvars = secondaryvars, matches = quals,
 interpolatePoints(matches = quals2, output_results = output_results,
                   exclude_poor_matches = TRUE,
                   subset_cell_names = "subset_cell_secondary",
-                  quality_name = "matching_quality_secondary",
-                  matching_distance = 1.5, raster_template = targetcells[[1]],
-                  plotraster = TRUE, filepath = getwd(),
+                  quality_name = "matching_quality",
+                  matching_distance = 1.5,
+                  raster_template = raster_template,
+                  plotraster = TRUE,
+                  saveraster = FALSE,
                   overwrite = FALSE)
-
-
 }
 \author{
 Rachel R. Renne

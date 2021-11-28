@@ -100,12 +100,15 @@ of matching quailty.
 # Load targetcells data for Target Cells
 data(targetcells)
 
-Create data frame of potential matching variables for Target Cells
+# Create data frame of potential matching variables for Target Cells
 allvars <- makeInputdata(targetcells)
 
 # Restrict data to matching variables of interest
 matchingvars <- allvars[,c("cellnumbers","x","y","bioclim_01","bioclim_04",
-"bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+                       "bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+
+# Create raster_template
+raster_template <- targetcells[[1]]
 
 # Create vector of matching criteria
 criteria <- c(0.7,42,3.3,66,5.4,18.4)
@@ -113,21 +116,26 @@ criteria <- c(0.7,42,3.3,66,5.4,18.4)
 # Find solution for k = 200
 # Note: n_starts should be >= 10, it is 1 here to reduce run time.
 results1 <- kpoints(matchingvars,criteria = criteria,klist = 200,
-n_starts = 1,min_area = 50,iter = 50,raster_template = targetcells[[1]])
+                    n_starts = 1,min_area = 50,iter = 50,
+                    raster_template = raster_template)
 
 ###################################
 # First an example where subset_in_target = TRUE
+
 # Get points from solution to kpoints algorithm
 subsetcells <- results1$solutions[[1]]
 
 # Find matches and calculate matching quality
 quals <- multivarmatch(matchingvars, subsetcells, criteria = criteria,
                         matchingvars_id = "cellnumbers", addpoints = FALSE,
-                        raster_template = targetcells[[1]],
+                        raster_template = raster_template,
                         subset_in_target = TRUE)
 
 ###################################
 # Now an example where subset_in_target is FALSE
+# Remove previous subsetcells
+rm(subsetcells)
+
 # Get Subset cells data
 data(subsetcells)
 
@@ -137,8 +145,8 @@ subsetcells <- subsetcells[!duplicated(subsetcells$site_id),]
 
 # Pull out matching variables only, with site_id that identifies unique climate
 subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84","bioclim_01",
-"bioclim_04","bioclim_09","bioclim_12",
-"bioclim_15","bioclim_18")]
+                           "bioclim_04","bioclim_09","bioclim_12",
+                           "bioclim_15","bioclim_18")]
 
 # Ensure that site_id will be values unique to subsetcells
 subsetcells$site_id <- paste0("00",subsetcells$site_id)
@@ -147,7 +155,7 @@ subsetcells$site_id <- paste0("00",subsetcells$site_id)
 quals <- multivarmatch(matchingvars, subsetcells, criteria = criteria,
                          matchingvars_id = "cellnumbers",
                          subsetcells_id = "site_id",
-                         raster_template = targetcells[[1]],
+                         raster_template = raster_template,
                          subset_in_target = FALSE, addpoints = FALSE)
 }
 \author{

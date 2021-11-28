@@ -75,16 +75,21 @@
 #'
 #' @author Rachel R. Renne
 #'
+#' @export
+#'
 #' @examples
 #' # Load targetcells data for Target Cells
 #' data(targetcells)
 #'
-#' Create data frame of potential matching variables for Target Cells
+#' # Create data frame of potential matching variables for Target Cells
 #' allvars <- makeInputdata(targetcells)
 #'
 #' # Restrict data to matching variables of interest
 #' matchingvars <- allvars[,c("cellnumbers","x","y","bioclim_01","bioclim_04",
-#' "bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+#'                        "bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+#'
+#' # Create raster_template
+#' raster_template <- targetcells[[1]]
 #'
 #' # Create vector of matching criteria
 #' criteria <- c(0.7,42,3.3,66,5.4,18.4)
@@ -92,21 +97,26 @@
 #' # Find solution for k = 200
 #' # Note: n_starts should be >= 10, it is 1 here to reduce run time.
 #' results1 <- kpoints(matchingvars,criteria = criteria,klist = 200,
-#' n_starts = 1,min_area = 50,iter = 50,raster_template = targetcells[[1]])
+#'                     n_starts = 1,min_area = 50,iter = 50,
+#'                     raster_template = raster_template)
 #'
 #' ###################################
 #' # First an example where subset_in_target = TRUE
+#'
 #' # Get points from solution to kpoints algorithm
 #' subsetcells <- results1$solutions[[1]]
 #'
 #' # Find matches and calculate matching quality
 #' quals <- multivarmatch(matchingvars, subsetcells, criteria = criteria,
 #'                         matchingvars_id = "cellnumbers", addpoints = FALSE,
-#'                         raster_template = targetcells[[1]],
+#'                         raster_template = raster_template,
 #'                         subset_in_target = TRUE)
 #'
 #' ###################################
 #' # Now an example where subset_in_target is FALSE
+#' # Remove previous subsetcells
+#' rm(subsetcells)
+#'
 #' # Get Subset cells data
 #' data(subsetcells)
 #'
@@ -116,8 +126,8 @@
 #'
 #' # Pull out matching variables only, with site_id that identifies unique climate
 #' subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84","bioclim_01",
-#' "bioclim_04","bioclim_09","bioclim_12",
-#' "bioclim_15","bioclim_18")]
+#'                            "bioclim_04","bioclim_09","bioclim_12",
+#'                            "bioclim_15","bioclim_18")]
 #'
 #' # Ensure that site_id will be values unique to subsetcells
 #' subsetcells$site_id <- paste0("00",subsetcells$site_id)
@@ -126,7 +136,7 @@
 #' quals <- multivarmatch(matchingvars, subsetcells, criteria = criteria,
 #'                          matchingvars_id = "cellnumbers",
 #'                          subsetcells_id = "site_id",
-#'                          raster_template = targetcells[[1]],
+#'                          raster_template = raster_template,
 #'                          subset_in_target = FALSE, addpoints = FALSE)
 
 
@@ -326,6 +336,8 @@ multivarmatch <- function(matchingvars=NULL,subsetcells=NULL,
 #'
 #' @author Rachel R. Renne
 #'
+#' @export
+#'
 #' @importFrom stats complete.cases
 #' @importFrom stats sd
 #'
@@ -338,7 +350,10 @@ multivarmatch <- function(matchingvars=NULL,subsetcells=NULL,
 #'
 #' # Subset to include only matching variables
 #' matchingvars <- allvars[,c("cellnumbers","x","y","bioclim_01","bioclim_04",
-#' "bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+#'                         "bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+#'
+#' # Create raster_template
+#' raster_template <- targetcells[[1]]
 #'
 #' # Create vector of matching criteria
 #' criteria <- c(0.7,42,3.3,66,5.4,18.4)
@@ -346,30 +361,35 @@ multivarmatch <- function(matchingvars=NULL,subsetcells=NULL,
 #' # Find solution for k = 200
 #' # Note: n_starts should be >= 10, it is 1 here to reduce run time.
 #' results1 <- kpoints(matchingvars,criteria = criteria,
-#' klist = 200,n_starts = 1,min_area = 50,iter = 50,
-#' raster_template = targetcells[[1]])
+#'                    klist = 200, n_starts = 1, min_area = 50, iter = 50,
+#'                    raster_template = raster_template)
 #'
 #'
 #' ###################################
 #' # First an example where subset_in_target = TRUE
+#'
 #' # Get points from solution to kpoints algorithm
 #' subsetcells <- results1$solutions[[1]]
 #'
 #' # Find matches and calculate matching quality
 #' quals <- multivarmatch(matchingvars, subsetcells,
-#' matchingvars_id = "cellnumbers", raster_template = targetcells[[1]],
-#' subset_in_target = TRUE)
+#'                        criteria = criteria,
+#'                        matchingvars_id = "cellnumbers",
+#'                        raster_template = raster_template,
+#'                        subset_in_target = TRUE)
 #'
 #' # Run evaluateMatching
 #' sddiffs <- evaluateMatching(allvars = allvars, matches = quals,
 #'                             matchingvars_id = "cellnumbers",
 #'                             secondarymatch = FALSE,
-#'                             subset_in_target = TRUE, matching_distance = 1.5,
+#'                             subset_in_target = TRUE,
+#'                             matching_distance = 1.5,
 #'                             plot_diffs = TRUE)
 #'
 #' ###################################
 #' # Now an example where subset_in_target is FALSE
-#' # Get points from solution to kpoints algorithm
+#' rm(subsetcells)
+#' # Get subsetcells
 #' data(subsetcells)
 #'
 #' # Remove duplicates (representing cells with same climate but different
@@ -378,25 +398,38 @@ multivarmatch <- function(matchingvars=NULL,subsetcells=NULL,
 #'
 #' # Pull out matching variables only, with site_id that identifies unique climate
 #' subsetcells1 <- subsetcells[,c("site_id","X_WGS84","Y_WGS84","bioclim_01",
-#' "bioclim_04","bioclim_09","bioclim_12",
-#' "bioclim_15","bioclim_18")]
+#'                                "bioclim_04","bioclim_09","bioclim_12",
+#'                                "bioclim_15","bioclim_18")]
 #'
 #' # Ensure that site_id will be values unique to subsetcells
 #' subsetcells1$site_id <- paste0("00",subsetcells$site_id)
 #'
 #' # Find matches and calculate matching quality
-#' quals <- multivarmatch(matchingvars, subsetcells=subsetcells1,
-#' matchingvars_id = "cellnumbers",subsetcells_id = "site_id",
-#' raster_templat = targetcells[[1]], subset_in_target = FALSE)
+#' quals <- multivarmatch(matchingvars,
+#'                        subsetcells=subsetcells1,
+#'                        criteria = criteria,
+#'                        matchingvars_id = "cellnumbers",
+#'                        subsetcells_id = "site_id",
+#'                        raster_templat = raster_template,
+#'                        subset_in_target = FALSE)
+#'
+#' # Remove previous subsetcells
+#' rm(subsetcells)
+#' # Get subsetcells
+#' data(subsetcells)
+#'
+#' # Remove duplicates (representing cells with same climate but different
+#' # soils--we want to match on climate only)
+#' subsetcells <- subsetcells[!duplicated(subsetcells$site_id),]
 #'
 #' # Get all variables for Subset cells now:
 #' subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84",
-#' names(allvars)[4:22])]
+#'                               names(allvars)[4:24])]
 #'
 #' # Run evaluateMatching
-#' sddiffs <- evaluateMatching(allvars = allvars[,c(1:22)],
+#' sddiffs <- evaluateMatching(allvars = allvars[,c(1:24)],
 #'                             subsetcells = subsetcells,
-#'                             secondarymatch = TRUE,
+#'                             secondarymatch = FALSE,
 #'                             quality_name = "matching_quality",
 #'                             matches = quals,
 #'                             matchingvars_id = "cellnumbers",
@@ -417,18 +450,32 @@ evaluateMatching <- function(allvars = NULL, subsetcells = NULL,
   if (sum(names(allvars)[1:3] %in% c('x','y','cellnumbers')) < 3){
     stop("Verify format of the first three columns in 'allvars'. See documentation for details.")
   }
-  for (ci in 4:ncol(matchingvars)){
-    if (!is.numeric(matchingvars[,ci])){
+  for (ci in 4:ncol(allvars)){
+    if (!is.numeric(allvars[,ci])){
       stop("Variable '",colnames(allvars)[ci],"' is not numeric.")
     }
   }
   # Modify allvars and matches to exclude missing data
-  allvars <- allvars[complete.cases(allvars),]
-  matches <- matches[complete.cases(matches),]
-  if (sum(rownames(allvars)==rownames(matches)) < nrow(allvars)){
+  allvars1 <- allvars[complete.cases(allvars),]
+  matches1 <- matches[complete.cases(matches),]
+  if (nrow(allvars1)!=nrow(matches1)){
+    matches1 <- matches[as.logical(complete.cases(allvars)*complete.cases(matches)),]
+    allvars1 <- allvars[as.logical(complete.cases(allvars)*complete.cases(matches)),]
+    if (nrow(allvars1)!=nrow(matches1)){
     stop("Verify inputs: rownames of 'allvars' and 'matches' do not match.")
+          }
+    if (sum(rownames(allvars1)==rownames(matches1)) < nrow(allvars1)){
+    stop("Verify inputs: rownames of 'allvars' and 'matches' do not match.")
+    }
+  } else {
+    if (sum(rownames(allvars1)==rownames(matches1)) < nrow(allvars1)){
+      stop("Verify inputs: rownames of 'allvars' and 'matches' do not match.")
+    }
   }
-
+  allvars <- allvars1
+  rm(allvars1)
+  matches <- matches1
+  rm(matches1)
   # Modify matches data frame if secondarymatch = TRUE
   if (secondarymatch){
     matches <- data.frame(x = matches$x, y = matches$y, target_cell = matches$target_cell,
@@ -449,14 +496,16 @@ evaluateMatching <- function(allvars = NULL, subsetcells = NULL,
   # Calculate SD of diffs for all and/or for matched cells:
   if (subset_in_target){
   for (i in 4:(ncol(allvars1)-1)){
-    results[1,i-3] <- sd(allvars1[as.character(allvars1[,ncol(allvars1)]),i]-allvars1[,i], na.rm = T)
-    results[2,i-3] <- sd(matchedonly[as.character(matchedonly[,ncol(matchedonly)]),i]-matchedonly[,i], na.rm = T)
+    #print(paste0("Now working on ",names(allvars)[i],"."))
+    results[1,i-3] <- sd(allvars1[as.character(allvars1[,ncol(allvars1)]),i]-allvars1[,i], na.rm = TRUE)
+    results[2,i-3] <- sd(matchedonly[as.character(matchedonly[,ncol(matchedonly)]),i]-matchedonly[,i], na.rm = TRUE)
     }
   }else if (!subset_in_target){
     rownames(subsetcells) <- subsetcells[,subsetcells_id]
     for (i in 4:(ncol(allvars1)-1)){
-    results[1,i-3] <- sd(subsetcells[as.character(allvars1[,ncol(allvars1)]),colnames(allvars1)[i]]-allvars1[,i], na.rm = T)
-    results[2,i-3] <- sd(subsetcells[as.character(matchedonly[,ncol(matchedonly)]),colnames(allvars1)[i]]-matchedonly[,i], na.rm = T)
+    #print(paste0("Now working on ",names(allvars)[i],"."))
+    results[1,i-3] <- sd(subsetcells[as.character(allvars1[,ncol(allvars1)]),i]-allvars1[,i], na.rm = TRUE)
+    results[2,i-3] <- sd(subsetcells[as.character(matchedonly[,ncol(matchedonly)]),i]-matchedonly[,i], na.rm = TRUE)
     }
   }
   # Remove any columns with all NAs
@@ -491,17 +540,64 @@ evaluateMatching <- function(allvars = NULL, subsetcells = NULL,
 #'
 #' @author Rachel R. Renne
 #'
+#' @export
+#'
 #' @importFrom graphics par
 #' @importFrom graphics barplot
 #' @importFrom graphics legend
 #' @importFrom graphics box
 #'
 #' @examples
-#'sd_barplot(results)
+#' # Load targetcells data for Target Cells (from rMultivariateMatchingAlgorithms package)
+#' data(targetcells)
+#'
+#' # Create data frame of potential matching variables for Target Cells
+#' allvars <- makeInputdata(targetcells)
+#'
+#' # Subset to include only matching variables
+#' matchingvars <- allvars[,c("cellnumbers","x","y","bioclim_01","bioclim_04",
+#'                         "bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+#'
+#' # Create raster_template
+#' raster_template <- targetcells[[1]]
+#'
+#' # Create vector of matching criteria
+#' criteria <- c(0.7,42,3.3,66,5.4,18.4)
+#'
+#' # Find solution for k = 200
+#' # Note: n_starts should be >= 10, it is 1 here to reduce run time.
+#' results1 <- kpoints(matchingvars,criteria = criteria,
+#'                    klist = 200, n_starts = 1, min_area = 50, iter = 50,
+#'                    raster_template = raster_template)
+#'
+#'
+#' ###################################
+#' # First an example where subset_in_target = TRUE
+#'
+#' # Get points from solution to kpoints algorithm
+#' subsetcells <- results1$solutions[[1]]
+#'
+#' # Find matches and calculate matching quality
+#' quals <- multivarmatch(matchingvars, subsetcells,
+#'                        criteria = criteria,
+#'                        matchingvars_id = "cellnumbers",
+#'                        raster_template = raster_template,
+#'                        subset_in_target = TRUE)
+#'
+#' # Run evaluateMatching
+#' sddiffs <- evaluateMatching(allvars = allvars, matches = quals,
+#'                             matchingvars_id = "cellnumbers",
+#'                             secondarymatch = FALSE,
+#'                             subset_in_target = TRUE,
+#'                             matching_distance = 1.5,
+#'                             plot_diffs = FALSE)
+#'
+#' # Plot differences
+#' sd_barplot(sddiffs)
 
 sd_barplot <- function(results){
   # Calculate xmax_val
-  xmax_val <- max(results, na.rm = T)*1.1
+  xmax_val <- max(results, na.rm = TRUE)*1.1
   # Create barplot showing standard deviation of differences between Target and Subset cells
   par(mar = c(2,max(nchar(names(results)))/3,2,1), mgp = c(1.5,0.2,0), tcl = 0.3,
       lwd =1, mfrow = c(1,1))
@@ -601,20 +697,33 @@ sd_barplot <- function(results){
 #'
 #' @author Rachel R. Renne
 #'
+#' @export
+#'
 #' @examples
 #' # Load targetcells data for Target Cells
 #' data(targetcells)
 #'
+#' # Create raster_template
+#' raster_template <- targetcells[[1]]
+#'
 #' # Create data frame of potential matching variables for Target Cells
 #' allvars <- makeInputdata(targetcells)
 #'
-#' #' # Create vector of matching criteria
+#' # Restrict data to matching variables of interest
+#' matchingvars <- allvars[,c("cellnumbers","x","y","bioclim_01","bioclim_04",
+#'                        "bioclim_09","bioclim_12","bioclim_15","bioclim_18")]
+#'
+#' # Create raster_template
+#' raster_template <- targetcells[[1]]
+#'
+#' # Create vector of matching criteria
 #' criteria <- c(0.7,42,3.3,66,5.4,18.4)
 #'
-#'  # Find solution for k = 200
+#' # Find solution for k = 200
 #' # Note: n_starts should be >= 10, it is 1 here to reduce run time.
-#' results1 <- kpoints(matchingvars,criteria = criteria,klist = 200,
-#' n_starts = 1,min_area = 50,iter = 50,raster_template = targetcells[[1]])
+#' results1 <- kpoints(matchingvars, criteria = criteria, klist = 200,
+#'                     n_starts = 1, min_area = 50, iter = 50,
+#'                     raster_template = raster_template)
 #'
 #'
 #' ###################################
@@ -622,10 +731,14 @@ sd_barplot <- function(results){
 #' # Get points from solution to kpoints algorithm
 #' subsetcells <- results1$solutions[[1]]
 #'
+#' # Create raster_template
+#' raster_template <- targetcells[[1]]
+#'
 #' # Find matches and calculate matching quality
 #' quals <- multivarmatch(matchingvars, subsetcells,
+#'                        criteria = criteria,
 #'                        matchingvars_id = "cellnumbers",
-#'                        raster_template = targetcells[[1]],
+#'                        raster_template = raster_template,
 #'                        subset_in_target = TRUE)
 #'
 #' # Look at geographic distances
@@ -635,11 +748,14 @@ sd_barplot <- function(results){
 #'                            exclude_poor_matches = TRUE,
 #'                            matching_distance = 1.5,
 #'                            longlat = TRUE,
-#'                            raster_template = targetcells[[1]])
+#'                            raster_template = raster_template)
 #'
 #'
 #' ###################################
 #' # Now an example where subset_in_target is FALSE
+#' # Remove previous subsetcells
+#' rm(subsetcells)
+#'
 #' # Get points from solution to kpoints algorithm
 #' data(subsetcells)
 #'
@@ -649,17 +765,22 @@ sd_barplot <- function(results){
 #'
 #' # Pull out matching variables only, with site_id that identifies unique climate
 #' subsetcells <- subsetcells[,c("site_id","X_WGS84","Y_WGS84","bioclim_01",
-#' "bioclim_04","bioclim_09","bioclim_12",
-#' "bioclim_15","bioclim_18")]
+#'                            "bioclim_04","bioclim_09","bioclim_12",
+#'                            "bioclim_15","bioclim_18")]
 #'
 #' # Ensure that site_id will be values unique to subsetcells
 #' subsetcells$site_id <- paste0("00",subsetcells$site_id)
 #'
 #' # Find matches and calculate matching quality
 #' quals <- multivarmatch(matchingvars, subsetcells=subsetcells,
-#' matchingvars_id = "cellnumbers",subsetcells_id = "site_id",
-#'                          raster_template = targetcells[[1]],
-#'                          subset_in_target = FALSE)
+#'                        criteria = criteria,
+#'                        matchingvars_id = "cellnumbers",
+#'                        subsetcells_id = "site_id",
+#'                        raster_template = raster_template,
+#'                        subset_in_target = FALSE)
+#'
+#' # Prepare subsetcells site_ids
+#' subsetcells$site_id <- as.character(as.numeric(subsetcells$site_id))
 #'
 #' # Look at geographic distances
 #' geodist <- evaluateGeoDist(matches = quals, subsetcells = subsetcells,
@@ -668,7 +789,7 @@ sd_barplot <- function(results){
 #'                            exclude_poor_matches = TRUE,
 #'                            matching_distance = 1.5,
 #'                            longlat = TRUE, quality_name = "matching_quality",
-#'                            raster_template = targetcells[[1]])
+#'                            raster_template = raster_template)
 
 evaluateGeoDist <- function(matches, subsetcells, subsetcells_id = 'site_id',
                             subset_in_target = TRUE,
@@ -739,7 +860,7 @@ evaluateGeoDist <- function(matches, subsetcells, subsetcells_id = 'site_id',
   cols <- c("#fff7bc","#fee391","#fec44f","#fe9929","#ec7014","#cc4c02","#993404","#662506")
 
   # set breaks
-  bks <- c(0, 6, 12, 18, 36, 72, 144, 288, round(max(distkm)))
+  bks <- c(0, 6, 12, 18, 36, 72, 144, 288, round(max(distkm, na.rm = TRUE)))
 
   # Plot map:
   legendPlot(r, bks = bks, cols = cols, thisVariable = "Distance to Subset cell (km)")
