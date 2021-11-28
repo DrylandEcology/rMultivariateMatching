@@ -2,7 +2,7 @@
 title: "Selecting points with rMultivariateMatching"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Selecting_points_with_rMultivariateMatching}
+  %\VignetteIndexEntry{Selecting points with rMultivariateMatching}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -48,7 +48,7 @@ The functions in the `rMultivariateMatching` package measure similarity between 
 
 The figure below illustrates an overview of the site selection and interpolation methods and key terminology. First, a set of **matching variables** are selected and standardized using user-defined **matching criteria**. Next, the `kpoints` algorithm is used to determine an optimal set of *k* **subset cells** for use in field sampling or simulation. All **target cells** are matched to one of the **subset cells** (matches are denoted by color in central panel). Finally, oint results (e.g., simulation output) for the **subset cells** are interpolated across the study area using multivariate matching to produce continuous, high-resolution maps of output, such as plant functional type biomass or ecohydrological variables. 
 
-<img src="Fig_1_added_text_v3.png" width="100%">
+<img src="./figures/Fig_1_added_text_v3.png" width="100%">
 
 ```{r setup}
 library(rMultivariateMatching)
@@ -167,7 +167,7 @@ In the above example, `plot_coverage` is set to `FALSE`. If `TRUE`, the `choose_
 criteriaplot(results2, criteria_list)
 ```
 
-<img src="criteriaplot.png" width="50%">
+<img src="./figures/criteriaplot.png" width="50%">
 
 ### kpoints
 
@@ -190,7 +190,7 @@ kpoints(matchingvars, criteria = criteria, klist = 200,
                     raster_template = targetcells[[1]], verify_stop = TRUE)
 ```
 
-<img src="verifystoppingcriteria.png" width="50%">
+<img src="./figures/verifystoppingcriteria.png" width="50%">
 
 ### Explanation of `kpoints` arguments
 
@@ -252,7 +252,7 @@ The `plotcoverage` function takes output from the `kpoints` function that has be
 plotcoverage(results3)
 ```
 
-<img src="coverageklist.png" width="50%">
+<img src="./figures/coverageklist.png" width="50%">
 
 ### Verify stopping criteria
 
@@ -274,7 +274,7 @@ results1 <- kpoints(matchingvars, criteria = criteria, klist = 200,
                     savebest = FALSE)
 ```
 
-<img src="verifystopping_v2.png" width="50%">
+<img src="./figures/verifystopping_v2.png" width="50%">
 
 ## Finding final selection of subset cells using `kpoints`
 

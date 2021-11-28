@@ -2,7 +2,7 @@
 title: "Matching and interpolation with kpoints"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Matching_and_interpolation_with_kpoints}
+  %\VignetteIndexEntry{Matching and interpolation with kpoints}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -50,7 +50,7 @@ The functions in the `rMultivariateMatching` package measure similarity between 
 
 The figure below illustrates an overview of the site selection and interpolation methods and key terminology. First, a set of **matching variables** are selected and standardized using user-defined **matching criteria**. Next, the `kpoints` algorithm is used to determine an optimal set of *k* **subset cells** for use in field sampling or simulation. All **target cells** are matched to one of the **subset cells** (matches are denoted by color in central panel). Finally, point results (e.g., simulation output) for the **subset cells** are interpolated across the study area using multivariate matching to produce continuous, high-resolution maps of output, such as plant functional type biomass or ecohydrological variables. 
 
-<img src="Fig_1_added_text_v3.png" width="100%">
+<img src="./figures/Fig_1_added_text_v3.png" width="100%">
 
 
 
@@ -112,7 +112,7 @@ results1 <- kpoints(matchingvars,criteria = criteria,klist = 200,
                     savebest = FALSE)
 ```
 
-<img src="kpoints200_verifystop.png" width="50%">
+<img src="./figures/kpoints200_verifystop.png" width="50%">
 
 
 ```{r}
@@ -189,7 +189,7 @@ quals <- multivarmatch(matchingvars, subsetcells, criteria = criteria,
                         subset_in_target = TRUE)
 ```
 
-<img src="matchingquality_withkpoints.png" width="50%">
+<img src="./figures/matchingquality_withkpoints.png" width="50%">
 
 ### Explanation of `multivarmatch` outputs
 
@@ -256,7 +256,7 @@ sddiffs <- evaluateMatching(allvars = allvars, matches = quals,
                             seconarymatch = FALSE)
 ```
 
-<img src="sd_diffs_withkpoints.png" width="50%">
+<img src="./figures/sd_diffs_withkpoints.png" width="50%">
 
 ### Explanation of `evaluateMatching` outputs
 
@@ -314,13 +314,13 @@ geodist <- evaluateGeoDist(matches = quals, subsetcells = subsetcells,
 
 *Distance (km) between* **target** *and* *matched* **subset cells***.*
 
-<img src="geodistance_withkpoints.png" width="50%">
+<img src="./figures/geodistance_withkpoints.png" width="50%">
 
 
 
 *Average distance between the* **subset cell** *that is matched to a given* **target cell** *and the* **subset cells** *that are matched to the eight adjacent neighbors of that* **target cell***.*
 
-<img src="neighbordist_withkpoints.png" width="50%">
+<img src="./figures/neighbordist_withkpoints.png" width="50%">
 
 
 ### Explanation of `evaluateGeoDist` outputs
@@ -400,7 +400,7 @@ for (i in 6:9){
 }
 ```
 
-<img src="cverrors_withkpoints.png" width="80%">
+<img src="./figures/cverrors_withkpoints.png" width="80%">
 
 
 ### Calculate matching errors
@@ -463,25 +463,25 @@ interpolatePoints(matches = quals, output_results = output_results,
 
 *Interpolated output of bioclim_02.*
 
-<img src="interpolatedoutput_bioclim_02.png" width="50%">
+<img src="./figures/interpolatedoutput_bioclim_02.png" width="50%">
 
 
 
 *Interpolated output of bioclim_03.*
 
-<img src="interpolatedoutput_bioclim_03.png" width="50%">
+<img src="./figures/interpolatedoutput_bioclim_03.png" width="50%">
 
 
 
 *Interpolated output of bioclim_16.*
 
-<img src="interpolatedoutput_bioclim_16.png" width="50%">
+<img src="./figures/interpolatedoutput_bioclim_16.png" width="50%">
 
 
 
 *Interpolated output of bioclim_17.*
 
-<img src="interpolatedoutput_bioclim_17.png" width="50%">
+<img src="./figures/interpolatedoutput_bioclim_17.png" width="50%">
 
 ## References
 
