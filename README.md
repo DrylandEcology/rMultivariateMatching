@@ -43,8 +43,11 @@ print
 To install the `rMultivariateMatching` package, please run the following
 code.
 
+*Note that you may need to install `devtools` and `rmarkdown` to install
+the package and view the vignettes.*
+
 ``` r
-# install.packages("devtools")
+# install.packages(c("devtools","rmarkdown"))
 devtools::install_github("DrylandEcology/rMultivariateMatching", build_vignettes = TRUE)
 ```
 
@@ -63,19 +66,19 @@ browseVignettes("rMultivariateMatching")
 
 The site selection method (`kpoints`) is designed to select optimal
 sites for simulation from within a study area, for the purpose of
-applying the interpolation function `interpolatePoints` to interpolate
-low spatial resolution simulation output to create high spatial
-resolution maps of output variables across the study area. The site
-selection method is meant to balance the cost of adding more sites (in
-terms of computational or other resources) with the benefit of
-representing a larger proportion of the study area.
+applying the `interpolatePoints` function to interpolate sparse or low
+spatial resolution simulation output to create high spatial resolution
+maps of output variables across the study area. The site selection
+method is meant to balance the cost of adding more sites (in terms of
+computational or other resources) with the benefit of representing a
+larger proportion of the study area.
 
 Importantly, the site selection method could also be used to select an
 optimal set of sites for field sampling.
 
 Below is an example of site selection using the `kpoints` function to
 find 50 points across drylands in the state of Wyoming. Please see the
-‘Selecting points with rMultivariateMatching’ vignette for a more
+*Selecting points with rMultivariateMatching* vignette for a more
 detailed workflow of how to apply these methods.
 
 ``` r
@@ -116,23 +119,23 @@ these methods, depending on matching method and whether or not your
 simulation sites were selected using `kpoints`.
 
 -   For interpolating simulation output from sites selected using
-    `kpoints`, please refer to the ‘Matching and interpolation with
-    kpoints’ vignette.
+    `kpoints`, please refer to the *Matching and interpolation with
+    kpoints* vignette.
 
 -   For interpolating simulation output from sites that were not
-    selected using `kpoints`, please refer to the ‘Matching and
-    interpolation without kpoints’ vignette.
+    selected using `kpoints`, please refer to the *Matching and
+    interpolation without kpoints* vignette.
 
 -   For interpolating simulation output using a two-step matching
     process (as described in *Renne et al.*) using sites that were not
-    selected using `kpoints`, please refer to the ‘Two-step matching and
-    interpolation without kpoints’ vignette.
+    selected using `kpoints`, please refer to the *Two-step matching and
+    interpolation without kpoints* vignette.
 
 *Interpolation of DryPROP for the state of Wyoming. DryPROP refers to
 the proportion of days that all layers in an ecologically relevant
-portion of the soil are dry when soil temperature at 50 cm &gt;5 degrees
-Celsius. Simulation output data used in the interpolation are from
-Bradford et al. (2019).*
+portion of the soil are dry when soil temperature at 50 cm is &gt;5
+degrees Celsius. Simulation output data used in the interpolation are
+from Bradford et al. (2019).*
 
 <img src="./man/figures/README-interpolatedoutput_dryprop.png" width="50%">
 
@@ -162,7 +165,7 @@ sites from Bradford et al. (2019).*
 <img src="./man/figures/README-geodistance_withoutkpoints.png" width="50%">
 
 *Average distance between the simulated site that is matched to a given
-location and the simulated site that is matched to the eight adjacent
+location and the simulated sites that are matched to the eight adjacent
 neighbors of that location using simulated sites from Bradford et
 al. (2019).*
 
@@ -178,13 +181,13 @@ variables from Bradford et al. (2019).*
 ### Examples of the site selection and interpolation methods in print
 
 In the site selection example in *Renne et al.*, our goal was to project
-the impacts of climate change, wildfire, and lifestock grazing on big
+the impacts of climate change, wildfire, and livestock grazing on big
 sagebrush (*Artemisia tridentata*) plant communities in the western
 United States using STEPWAT2, an individual-based, gap dynamics plant
-simulation model (Palmquist et al., 2018; Palmquist et al., 2018). So,
-we chose a set of six climate variables that capture the major drivers
-of plant community structure in drylands as matching variables. We used
-the site selection interpolation methods described in *Renne et al.* to
+simulation model (Palmquist et al., 2018a; Palmquist et al., 2018b). We
+chose a set of six climate variables that capture the major drivers of
+plant community structure in drylands as matching variables. We used the
+site selection interpolation methods described in *Renne et al.* to
 generate the maps of simulation output for a recent publication
 investigating the projected impacts of climate change on big sagebrush
 plant communities:
@@ -214,11 +217,11 @@ resistance. *Front. Ecol. Evol*. 7:358.
 <https://doi.org/10.3389/fevo.2019.00358>
 
 Palmquist, K. A., Bradford, J. B., Martyn, T. E., Schlaepfer, D. R., &
-Lauenroth, W. K. (2018). STEPWAT2: an individual-based model for
+Lauenroth, W. K. (2018a). STEPWAT2: an individual-based model for
 exploring the impact of climate and disturbance on dryland plant
 communities. *Ecosphere*, 9(8). <https://doi.org/10.1002/ecs2.2394>
 
 Palmquist, K. A, Schlaepfer, D. R., Martyn, T. E., Bradford, J. B., &
-Lauenroth, W. K. (2018). DrylandEcology/STEPWAT2: STEPWAT2 Model
+Lauenroth, W. K. (2018b). DrylandEcology/STEPWAT2: STEPWAT2 Model
 Description (Palmquist, et al., 2018 Ecosphere). Zenodo.
 <https://doi.org/10.5281/zenodo.1306924>

@@ -12,10 +12,9 @@ Description: Simulation models are valuable tools for estimating ecosystem
     and disturbance regimes, but computational requirements can restrict the 
     number of feasible simulations. Thus, simulation models are often run at 
     coarse scales or for representative points and these results can be difficult 
-    to use in decision-making.We present cost-effective methods for interpolating 
-    multivariate and time series simulation output to high resolution maps. This 
-    package includes tools for site selection, interpolation of complex 
-    multivariate and timeseries data to high-resolution maps, and estimation of 
+    to use in decision-making. We present cost-effective methods for interpolating 
+    multivariate and time series simulation output to high resolution maps, 
+    including tools for site selection, interpolation, and estimation of 
     matching and interpolation errors.
 License: GPL (>= 3)
 Encoding: UTF-8
@@ -28,9 +27,9 @@ Suggests:
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Imports: 
-    raster,
-    sp,
-    distances
+    raster (>= 3.5-9),
+    sp (>= 1.4-6),
+    distances (>= 0.1.8)
 Depends: 
     R (>= 2.10)
 VignetteBuilder: knitr

@@ -1,6 +1,6 @@
 #' Climate and soil variables for the state of Wyoming
 #'
-#' A rasterStack containing 21 rasters of climate and soil variables for drylands
+#' A rasterStack of 21 RasterLayers of climate and soil variables for drylands
 #' in the state of Wyoming at 30-arcsecond resolution (WGS84). We defined drylands
 #' as cells where a 30-arcsecond (~1 km) resolution aridity index (ratio of
 #' precipitation to potential evapotranspiration) defined for the 1970-2000 period
@@ -10,7 +10,7 @@
 #' described by Hijman (2017) in \code{\link[dismo]{biovars}} function (also
 #' defined below).
 #'
-#' @format A rasterStack with 21 layers, each with the following attributes:\cr
+#' @format A rasterStack of 21 RasterLayers, each with the following attributes:\cr
 #' \cr
 #' **dimensions:** 482, 841, 405362, 21  (nrow, ncol, ncell, nlayers)\cr
 #' **resolution:** 0.008333333, 0.008333333  (x, y)\cr

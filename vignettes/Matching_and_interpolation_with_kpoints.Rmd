@@ -20,11 +20,11 @@ knitr::opts_chunk$set(
 
 This vignette describes a workflow that covers site selection, matching, and interpolation for a case where the `kpoints` function is used to select sites. This workflow is appropriate when the goals are 1) to identify sites for simulation (**subset cells**) from a larger study area (**target cells**) and 2) to interpolate simulation results from the **subset cells** to create high-resolution, continuous maps of the study area. Here, we illustrate the workflow using an example for the state of Wyoming. The code chunks in this document are meant to be run sequentially. Data relevant to this example are contained within the `rMultivariateMatching` package. The site-selection and interpolation methods are described in:  
 
-> Renne, R. R., Schlaepfer, D. R., Palmquist, K. A., Lauenroth, W. K., & Bradford, J. B. In preparation. Estimating complex ecological variables at high resolution in heterogeneous terrain using a multivariate matching algorithm. 
+> Renne, R. R., Schlaepfer, D. R., Palmquist, K. A., Lauenroth, W. K., & Bradford, J. B. In preparation. Estimating complex ecological variables at high spatial resolution using cost-effective multivariate matching algorithms. 
 
 ### Examples of the site selection and interpolation methods in print
 
-In the site selection example in *Renne et al.*, our goal was to project the impacts of climate change, wildfire, and lifestock grazing on big sagebrush (*Artemisia tridentata*) plant communities in the western United States using STEPWAT2, an individual-based, gap dynamics plant simulation model (Palmquist, Bradford et al., 2018; Palmquist, Schlaepfer et al., 2018). So, we chose a set of six climate variables that capture the major drivers of plant community structure in drylands as matching variables. We used the site selection interpolation methods described in *Renne et al.* to generate the maps of simulation output for a recent publication investigating the projected impacts of climate change on big sagebrush plant communities:
+In the site selection example in *Renne et al.*, our goal was to project the impacts of climate change, wildfire, and livestock grazing on big sagebrush (*Artemisia tridentata*) plant communities in the western United States using STEPWAT2, an individual-based, gap dynamics plant simulation model (Palmquist et al., 2018a; Palmquist et al., 2018b). We chose a set of six climate variables that capture the major drivers of plant community structure in drylands as **matching variables**. We used the site selection interpolation methods described in *Renne et al.* to generate the maps of simulation output for a recent publication investigating the projected impacts of climate change on big sagebrush plant communities:
 
 > Palmquist, K. A., Schlaepfer, D. R., Renne, R. R., Torbit, S. C., Doherty, K. E., Remington, T. E., Watson, G., Bradford, J. B., & Lauenroth, W. K. (2021). Divergent climate change effects on widespread dryland plant communities driven by climatic and ecohydrological gradients. *Glob. Change Bio.*, 27(20), 5169-5185. https://doi.org/10.1111/gcb.15776
 
@@ -34,7 +34,7 @@ Interpolated datasets from the study are available from the US Geological Survey
 
 ## Overview and definitions
 
-In this vignette, we assume that we have already determined appropriate **matching variables** and **matching criteria** and have decided on the optimal number of points (`k`) needed to represent the study area. To see a worked example of how to use the `rMultivariateMatching` package to determine **matching criteria** and `k`, please refer to the "Selecting points with rMultivariateMatching" vignette. 
+In this vignette, we assume that we have already determined appropriate **matching variables** and **matching criteria** and have decided on the optimal number of points (*k*) needed to represent the study area. To see a worked example of how to use the `rMultivariateMatching` package to determine **matching criteria** and *k*, please refer to the *Selecting points with rMultivariateMatching* vignette. 
 
 In the example presented here, we start by selecting **subset cells** from the **target cells** using `kpoints`. Note that this workflow is distinct from a workflow where the simulated sites (**subset cells**) are **not** selected using `kpoints`. A workflow for the latter scenario can be found in the "Matching and interpolation without kpoints" vignette. 
 
@@ -69,9 +69,9 @@ data(targetcells)
 allvars <- makeInputdata(targetcells)
 ```
 
-Next, we run the `kpoints` function to find an optimal set of `k` **subset cells** from the **target cells**. The `kpoints` function initializes its search for an optimal solution for `k` using a random selection of **target cells** and iteratively searches for a solution.  
+Next, we run the `kpoints` function to find an optimal set of *k* **subset cells** from the **target cells**. The `kpoints` function initializes its search for an optimal solution for *k* using a random selection of **target cells** and iteratively searches for a solution.  
 
-Importantly, the solution is likely to vary depending on the initial random selection of cells, and similar to the *kmeans* clustering algorithm (MacQueen 1967), `kpoints` can get "stuck" in a locally optimal solution that falls short of the globally optimal solution. What that means in our case, is that running the `kpoints` function with a single random selection of `k` cells (`n_starts` = 1) is likely to result in a selection of `k` points that does not represent as much of the study area as is possible for that number of points. Thus, to increase the probability that `kpoints` will find a solution that represents as much of the study areas as possible for that value of `k`, we need to try multiple initiations of the algorithm with different random selections of **target cells**. This can be achieved by setting `n_starts` argument to a value > 1. The default value is 10 and values <10 will throw a warning (but still run). A reasonable number of starts for testing **matching criteria** and determining the optimal value of `k` would be 10. When you are ready to find the final selection of **subset cells** using `kpoints`, you should set `n_starts` to a relatively large number: `n_starts` = 100 should be adequate, and you may choose a higher number if you wish.  
+Importantly, the solution is likely to vary depending on the initial random selection of cells, and similar to the *kmeans* clustering algorithm (MacQueen 1967), `kpoints` can get "stuck" in a locally optimal solution that falls short of the globally optimal solution. What that means in our case, is that running the `kpoints` function with a single random selection of *k* cells (`n_starts` = 1) is likely to result in a selection of *k* points that does not represent as much of the study area as is possible for that number of points. Thus, to increase the probability that `kpoints` will find a solution that represents as much of the study areas as possible for that value of *k*, we need to try multiple initiations of the algorithm with different random selections of **target cells**. This can be achieved by setting `n_starts` argument to a value > 1. The default value is 10 and values <10 will throw a warning (but still run). A reasonable number of starts for testing **matching criteria** and determining the optimal value of *k* would be 10. When you are ready to find the final selection of **subset cells** using `kpoints`, you should set `n_starts` to a relatively large number: `n_starts` = 100 should be adequate, and you may choose a higher number if you wish.  
 
 **Note:** this function may take quite a while to run. Running `kpoints` with `n_starts` = 100 for this example could take 2-3 hours.
 
@@ -79,17 +79,17 @@ Importantly, the solution is likely to vary depending on the initial random sele
 
 Please also refer to the `kpoints` documentation.
 
-* `matchingvars` A data frame representing all **target cells** from which a subset of `k` points will be selected. This data frame can be created using the `makeInputdata` function.
+* `matchingvars` A data frame representing all **target cells** from which a subset of *k* points will be selected. This data frame can be created using the `makeInputdata` function.
 
 * `criteria` A vector of **matching criteria** that correspond to the **matching variables**. Matching criteria represent the maximum difference allowed for each variable between matched **target **and **subset cells**.
 
-* `klist` In this case, this represents `k`, that is, the number of **subset cells** we are selecting from the **target cells** (200 in this case).
+* `klist` In this case, this represents *k*, that is, the number of **subset cells** we are selecting from the **target cells** (200 in this case).
 
 * `n_starts` The number of random selections of **target cells** to use for initializing different runs of the `kpoints` algorithm (as discussed above).
 
 * `iter` One of the stopping criteria. This is the maximum number of iterations allowed for each initialization of the `kpoints` algorithm. This argument prevents the algorithm from running indefinitely when it fails to converge. Here it is set to 50, the default value.
 
-* `min_area` One of the stopping criteria. If the change in area represented by the `k` points is less than or equal to this value for five consecutive iterations, the `kpoints` algorithm has converged and it will move on to the next random start (or finish if all `n_starts` have been completed). Note that this value represents $km^2$.
+* `min_area` One of the stopping criteria. If the change in area represented by the *k* points is less than or equal to this value for five consecutive iterations, the `kpoints` algorithm has converged and it will move on to the next random start (or finish if all `n_starts` have been completed). Note that this value represents $km^2$.
 
 * `raster_template` This is one of the rasters used to define the **target cells** and it is used as a template to determine the area represented by each iteration and by the solution for each of the `n_starts`. This argument is fundamental to the `kpoints` function because `kpoints` is designed to optimize based on represented area.
 
@@ -128,13 +128,13 @@ results1$solution_areas/results1$totalarea
 
 The output from the `kpoints` function includes:
 
-* `solutions` A data frame of the final solution of `k` **subset cells**. Rownames correspond to the cellnumbers, and the 'x' and 'y' coordinates of the cells are included. (This is the data frame that is saved to file if the `savebest` argument is set to `TRUE`).   
+* `solutions` A data frame of the final solution of *k* **subset cells**. Rownames correspond to the cellnumbers, and the 'x' and 'y' coordinates of the cells are included. (This is the data frame that is saved to file if the `savebest` argument is set to `TRUE`).   
 
 * `solution_areas` The area (in $km^2$) represented by the **subset cells**. 
 
 * `totalarea` The area of the entire study area (in $km^2$).
 
-* `klist` The number of **subset cells** (`k`) selected by the `kpoints` function.
+* `klist` The number of **subset cells** (*k*) selected by the `kpoints` function.
 
 * `iter` This records the value used in the `kpoints` function for finding the solution.
 
@@ -153,7 +153,7 @@ Use the `multivarmatch` function to perform multivariate matching. This function
 
 Please also refer to the `multivarmatch` documentation.
 
-* `matchingvars` A data frame representing all **target cells** from which a subset of `k` points will be selected. This data frame can be created using the `makeInputdata` function. (Should be the same as used to in the `kpoints` function above).
+* `matchingvars` A data frame representing all **target cells** from which a subset of *k* points will be selected. This data frame can be created using the `makeInputdata` function. (Should be the same as used to in the `kpoints` function above).
 
 * `subsetcells` A data frame extracted from output from the `kpoints` function.
 
@@ -197,7 +197,7 @@ The output from the `multivarmatch` function is a data frame of **target cells**
 
 ## Evaluate matching
 
-Now that we have our final selection of `k` **subset cells**, we should evaluate the success of matching. In *Renne et al.*, we suggest four methods of evaluating matching.
+Now that we have our final selection of *k* **subset cells**, we should evaluate the success of matching. In *Renne et al.*, we suggest four methods of evaluating matching.
 
 1. Calculate matching quality (weighted Euclidean distance between **target **and matched **subset cells**)
 
@@ -253,7 +253,7 @@ sddiffs <- evaluateMatching(allvars = allvars, matches = quals,
                             subset_in_target = TRUE, 
                             matching_distance = 1.5,
                             plot_diffs = TRUE, 
-                            seconarymatch = FALSE)
+                            secondarymatch = FALSE)
 ```
 
 <img src="./figures/sd_diffs_withkpoints.png" width="50%">
@@ -333,7 +333,7 @@ Data frame with the distance between **target **and matched **subset cells** ('t
 
 Once simulations are complete for the **subset cells**, interpolation errors can calculated be estimated using leave-one-out cross validation (LOOCV) with the `loocv` function. In LOOCV, each **subset cell** is matched to its nearest neighbor from among the remaining **subset cells** (using Euclidean distance of the weighted **matching variables**). Then, an estimate of the interpolation error can be calculated using the following equation:
 
-$$CVerror=\sqrt{\frac{1}k*∑_{i=1}^{k}(y_i-\hat y_i)^2}$$
+$$CVerror=\sqrt{\frac{1}k∑_{i=1}^{k}(y_i-\hat y_i)^2}$$
 
 Where $k$ is the number of **subset cells**, $y$ is the value of the simulated output variable, and $\hat y$ is the value of the matched output variable.  
 
@@ -488,5 +488,9 @@ interpolatePoints(matches = quals, output_results = output_results,
 Hijmans, R. J. (2021). raster: Geographic Data Analysis and Modeling. R package version 3.4-13. https://CRAN.R-project.org/package=raster
 
 MacQueen, J. (1967). Some methods for classification and analysis of multivariate observations. In Le Cam, L. M., & Neyman, J. (Eds.), *Proceedings of the Fifth Berkeley Symposium on Mathematical Statistics and Probability*. (Vol. 1, No. 14, pp. 281-297). University of California Press.  
+
+Palmquist, K. A., Bradford, J. B., Martyn, T. E., Schlaepfer, D. R., & Lauenroth, W. K. (2018a). STEPWAT2: an individual-based model for exploring the impact of climate and disturbance on dryland plant communities. *Ecosphere*, 9(8). https://doi.org/10.1002/ecs2.2394  
+
+Palmquist, K. A, Schlaepfer, D. R., Martyn, T. E., Bradford, J. B., & Lauenroth, W. K. (2018b). DrylandEcology/STEPWAT2: STEPWAT2 Model Description (Palmquist, et al., 2018 Ecosphere). Zenodo. https://doi.org/10.5281/zenodo.1306924  
 
 Savje, F. (2019). distances: Tools for Distance Metrics. R package version 0.1.8. https://CRAN.R-project.org/package=distances

@@ -20,7 +20,7 @@ knitr::opts_chunk$set(
 
 This vignette describes a workflow that covers site selection, matching, and interpolation for a case where **subset cells** were not determined using the `kpoints` function. This workflow is appropriate when the goals is to interpolate simulation results from **subset cells** to create high-resolution, continuous maps of the study area. Here, we illustrate the workflow using an example for the state of Wyoming, where **subset cells** were generated using a regular 10 x 10 km grid (see Bradford et al. (2019) for details). The code chunks in this document are meant to be run sequentially. Data relevant to this example are contained within the `rMultivariateMatching` package. The site-selection and interpolation methods are described in:  
 
-> Renne, R. R., Schlaepfer, D. R., Palmquist, K. A., Lauenroth, W. K., & Bradford, J. B. In preparation. Estimating complex ecological variables at high resolution in heterogeneous terrain using a multivariate matching algorithm. 
+> Renne, R. R., Schlaepfer, D. R., Palmquist, K. A., Lauenroth, W. K., & Bradford, J. B. In preparation. Estimating complex ecological variables at high spatial resolution using cost-effective multivariate matching algorithms.
 
 ### Examples of the interpolation methods in print
 
@@ -367,7 +367,7 @@ Data frame with the distance between **target **and matched **subset cells** ('t
 
 Once simulations are complete for the **subset cells**, interpolation errors can calculated be estimated using leave-one-out cross validation (LOOCV) with the `loocv` function. In LOOCV, each **subset cell** is matched to its nearest neighbor from among the remaining **subset cells** (using Euclidean distance of the weighted **matching variables**). Then, an estimate of the interpolation error can be calculated using the following equation:
 
-$$CVerror=\sqrt{\frac{1}k*∑_{i=1}^{k}(y_i-\hat y_i)^2}$$
+$$CVerror=\sqrt{\frac{1}k∑_{i=1}^{k}(y_i-\hat y_i)^2}$$
 
 Where $k$ is the number of **subset cells**, $y$ is the value of the simulated output variable, and $\hat y$ is the value of the matched output variable.  
 
