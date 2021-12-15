@@ -30,23 +30,24 @@ In the interpolation example in *Renne et al.*, our goal was to generate high-re
 
 ## Overview and definitions
 
-In this vignette, we assume that we have already determined appropriate **matching variables** and **matching criteria** and run simulations for the **subset cells**.  Note that this workflow is distinct from a workflow where the simulated sites (**subset cells**) are selected using `kpoints`. A workflow for that scenario can be found in the "Matching and interpolation with kpoints" vignette. Furthermore, the example here is derived from the interpolation example in *Renne et al.* that used a two-step matching process to fit the experimental design described in Bradford et al., (2019). This workflow is somewhat specialized to that experimental design. However, a workflow that illustrates single-step matching and interpolation using **subset cells** that are not derived from the `kpoints` function can be found in the "Matching and interpolation without kpoints" vignette.
+In this vignette, we assume that we have already determined appropriate **matching variables** and **matching criteria** and run simulations for the **subset cells**.  Note that this workflow is distinct from a workflow where the simulated sites (**subset cells**) are selected using `kpoints`. A workflow for that scenario can be found in the *Matching and interpolation with kpoints* vignette. Furthermore, the example here is derived from the interpolation example in *Renne et al.* that used a two-step matching process to fit the experimental design described in Bradford et al., (2019). This workflow is somewhat specialized to that experimental design. However, a workflow that illustrates single-step matching and interpolation using **subset cells** that are not derived from the `kpoints` function can be found in the *Matching and interpolation without kpoints* vignette.
 
-The functions in the `rMultivariateMatching` package measure similarity between sites as the Euclidean distance of standardized (i.e., weighted) **matching variables**. Each variable is standardized by dividing it by the maximum amount of difference that would still allow two sites to be considered analogous for that variable. These maximum differences are called the **matching criteria** for each variable. For example, if two sites could be reasonably considered analogous as long as they were within 50 mm of each other for mean annual precipitation (MAP), the matching criteria for MAP could be set to 50 mm. Distances are calculated within the `rMultivariateMatching` function using the `distances` package (Savje 2019).
+The functions in the `rMultivariateMatching` package measure similarity between sites as the Euclidean distance of standardized (i.e., weighted) **matching variables**. Each variable is standardized by dividing it by the maximum amount of difference that would still allow two sites to be considered analogous for that variable. These maximum differences are called the **matching criteria**.  For example, if two sites could be reasonably considered analogous if their mean annual precipitations (MAP) were within 50 mm of each other, the matching criteria for MAP could be set to 50 mm. Distances are calculated within the `rMultivariateMatching` function using the `distances` package (Savje 2019).
 
 ### Definitions
 
-* **subset cells** A subset of sites (selected using `kpoints` or determined from some other method) for simulation. Sites are defined geographically as the centroid of the raster cells that they represent.
+* **subset cells** A set of sites for simulation.
 * **target cells** All cells across a study area. 
-* **matching variables** A set of variables relevant to the ecosystem and simulation model that are used to determine similarity between sites. Matching variables must be available as rasters covering the entire study area.
-* **matching criteria** Maximum allowable differences between Target and matched Subset cells for each matching variable such that sites can be considered analogous.
-* **kpoints** Site selection algorithm that uses multivariate clustering based on the unsupervised classification scheme, *k-means* (MacQueen 1967), to find groups of analogous sites across a study area. 
+* **matching variables** A set of variables relevant to the ecosystem and simulation model that are used to determine similarity between sites. **Matching variables** must be available as rasters covering the entire study area.
+* **matching criteria** Maximum allowable differences between **target** and matched **subset cells** for each matching variable such that sites can be considered analogous.
+* **kpoints** Site selection algorithm that uses multivariate clustering based on the unsupervised classification scheme, *kmeans* (MacQueen 1967), to find groups of analogous sites across a study area. 
 
-The figure below illustrates an overview of the site selection and interpolation methods and key terminology. First, a set of **matching variables** are selected and standardized using user-defined **matching criteria**. Next, the `kpoints` algorithm is used to determine an optimal set of *k* **subset cells** for use in field sampling or simulation. All **target cells** are matched to one of the **subset cells** (matches are denoted by color in central panel). Finally, point results (e.g., simulation output) for the **subset cells** are interpolated across the study area using multivariate matching to produce continuous, high-resolution maps of output, such as plant functional type biomass or ecohydrological variables. 
+The figure below illustrates an overview of the site selection and interpolation methods and key terminology. In this vignette, we focus on interpolation. First, a set of **matching variables** are selected and standardized using user-defined **matching criteria**. Next, a set of **subset cells** are defined (not using the `kpoints` function) and all **target cells** are matched to one of the **subset cells** (matches are denoted by color in the central panel). Finally, point results (e.g., simulation output) for the **subset cells** are interpolated across the study area using multivariate matching to produce continuous, high-resolution maps of output, such as plant functional type biomass or ecohydrological variables.
 
 <img src="./figures/Fig_1_added_text_v3.png" width="100%">
 
 ```{r setup}
+# Load the rMultivariateMatching package
 library(rMultivariateMatching)
 ```
 
@@ -64,7 +65,7 @@ allvars <- makeInputdata(targetcells)
 
 ## Determine matching criteria
 
-The next step is to determine **matching criteria**, that is, the maximum allowable difference for each **matching variable** between **target** and matched **subset cells**, such that the cells can be considered environmentally analogous. You may have some idea of what **matching criteria** should be based on your knowledge of the system and processes in question, but it can be useful to evaluate how the proportion of the study area that is represented by the **subset cells** changes with different **matching criteria** using the `choose_criteria` function.
+The next step is to determine **matching criteria**, that is, the maximum allowable difference for each **matching variable** between **target** and matched **subset cells** such that the cells can be considered environmentally analogous. You may have some idea of what **matching criteria** should be based on your knowledge of the system and processes in question, but it can be useful to evaluate how the proportion of the study area that is represented by the **subset cells** changes with different **matching criteria** using the `choose_criteria` function.
 
 ```{r}
 # Restrict data to matching variables of interest
@@ -85,7 +86,7 @@ stddev <- apply(matchingvars[,4:ncol(matchingvars)],2,sd)
 criteria_list <- list(range2.5pct, range5pct, range10pct, stddev)
 ```
 
-#### Table displaying the criteria list
+#### Table displaying `criteria_list`
 | bioclim_01 | bioclim_04 | bioclim_09 | bioclim_12 | bioclim_15 | bioclim_18 |
 |:----------:|:----------:|:----------:|:----------:|:----------:|:----------:|
 |   0.36     |  10.62     |    0.82    |    32.97   |     1.36   |    4.61    |
@@ -94,7 +95,7 @@ criteria_list <- list(range2.5pct, range5pct, range10pct, stddev)
 |   2.49     |  60.37     |    7.41    |    170.74  |     13.53  |    34.27   |
 
 
-Importantly, the `subsetcells` dataset that is included in the `rMultivariateMatching` package is a subset of sites that were simulated in Bradford et al. (2019). The experimental design of that study selected sites using a 10 x 10 km grid across western North American drylands. For each site, they simulated ecohydrological conditions for five different soil types. Thus, we devised a two-step matching method to fit this experimental design. This vignette demonstrates matching and interpolation using this two-step matching process. However, because the first step of matching only uses climate variables, we will start by limiting the `subsetcells` dataset to climatic **matching variables** as shown [above](#table-displaying-the-criteria-list).
+The `subsetcells` dataset that is included in the `rMultivariateMatching` package is a subset of sites that were simulated in Bradford et al. (2019). The experimental design of that study selected sites using a 10 x 10 km grid across western North American drylands. For each site, they simulated ecohydrological conditions for five different soil types. Thus, we devised a two-step matching method to fit this experimental design. This vignette demonstrates matching and interpolation using this two-step matching process. However, because the first step of matching only uses climate variables, we will start by limiting the `subsetcells` dataset to climatic **matching variables**.
 
 ```{r}
 # Bring in Subset cell data
@@ -121,7 +122,7 @@ Please also refer to the `choose_criteria` documentation.
 
 * `criteria_list` A list of vectors of **matching criteria** to be tested.
 
-* `raster_template` This is one of the rasters used to define the **target cells** and it is used as a template to determine the area represented by each iteration and by the solution for each of the `n_starts`. This argument is fundamental to the `kpoints` function because `kpoints` is designed to optimize based on represented area.
+* `raster_template` This is one of the rasters used to define the **target cells** and it is used as a template to determine the area represented by each set of **matching criteria**.
 
 * `subset_in_target` A boolean indicating if the **subset cells** are taken from within the **target cells**. This is `FALSE` in our example.
 
@@ -129,11 +130,11 @@ Please also refer to the `choose_criteria` documentation.
 
 * `subsetcells` Passed to `multivarmatch` function if `subset_in_target` is `FALSE` (as in this example). This should be a data frame of **subset cells** with column names corresponding exactly to those in `matchingvars` and row names should be unique identifiers.
 
-* `matchingvars_id` Name of the column in `matchingvars`that provides the unique identifiers for **target cells**. 
+* `matchingvars_id` Name of the column in `matchingvars` that provides the unique identifiers for **target cells**. 
 
-* `subsetcells_id` Name of the column in `subsetcells`that provides the unique identifiers for **subset cells**. Note that these unique identifiers should be numbers, but they may be classified as characters. In particular, if there are repeats among the`matchingvars_id`s and the `subsetcells_id`s, you can paste "00" before the `subsetcells_id`s to ensure they are unique from the `matchingvars_id`s (as we did in the previous code block).
+* `subsetcells_id` Name of the column in `subsetcells` that provides the unique identifiers for **subset cells**. Note that these unique identifiers should be numbers, but they may be classified as characters. In particular, if there are repeats among the `matchingvars_id`s and the `subsetcells_id`s, you can paste "00" before the `subsetcells_id`s to ensure they are unique from the `matchingvars_id`s (as we did in the previous code block).
 
-* `matching_distance` Gives the maximum allowable matching quality value (weighted Euclidean distance) between **target** and **subset cells**, when `subset_in_target` is `FALSE`. Default value is 1 so that output will be comparable to output from `choose_criteria` when `subset_in_target` is `TRUE`.
+* `matching_distance` The maximum allowable matching quality value (weighted Euclidean distance) between **target** and **subset cells**, when `subset_in_target` is `FALSE`. Default value is 1 so that output will be comparable to output from `choose_criteria` when `subset_in_target` is `TRUE`.
 
 
 ```{r}
@@ -155,11 +156,11 @@ coverage <- choose_criteria(matchingvars = matchingvars,
 
 ### Explanation of `choose_criteria` outputs
 
-The output from the `choose_criteria` function is a named list where the first item ('totalarea') reports the total area in $km^2$ of the **target cells** and the second item ('solution_areas') reports the area represented (Euclidean distance of weighted **matching variables** $\le 1$ between **target** and matched **subset cells**) for each set of **matching criteria**.
+The output from the `choose_criteria` function is a named list where the first item ('totalarea') reports the total area in $km^2$ of the **target cells** and the second item ('solution_areas') reports the area represented (Euclidean distance of weighted **matching variables** is $\le 1$ between **target** and matched **subset cells**) for each set of **matching criteria**.
 
 ## Perform matching
 
-The two-step matching method described in *Renne et al.* uses the experimental design presented in Bradford et al. (2019) to match low spatial resolution simulated sites (**subset cells**) to high-resolution **target cells**. Each low resolution **subset cell** was simulated with five different soil types, so we have five different sets of output results for each individual site. To achieve matching between these sites and **target cells** we first matched using climate variables, then we found the best match for each **target cell** from the five available soil types for the **subset cell** it was matched to using climate variables.
+The two-step matching method described in *Renne et al.* uses the experimental design presented in Bradford et al. (2019) to match low spatial resolution simulated sites (**subset cells**) to high-resolution **target cells**. Each low resolution **subset cell** was simulated with five different soil types, so we have five different sets of output results for each individual site. To achieve matching between these sites and **target cells**, we first matched using climate variables. Then we found the best match for each **target cell** from the five available soil types for the **subset cell** it was matched to using climate variables.
 
 ### First, match on climate variables
 
@@ -177,9 +178,9 @@ Please also refer to the `multivarmatch` documentation.
 
 * `matchingvars_id` The name of the column that contains the unique identifiers for each **target cell**. If `matchingvars` is derived from the `makeInputData`, this will be "cellnumbers".
 
-* `subsetcells_id` The name of the column that contains the unique identifiers for each **subset cell**. Note that these unique identifiers should be numbers, but they may be classified as characters. In particular, if there are repeats among the`matchingvars_id`s and the `subsetcells_id`s, you can paste "00" before the `subsetcells_id`s to ensure they are unique from the `matchingvars_id`s (as we did in the previous code block).
+* `subsetcells_id` The name of the column that contains the unique identifiers for each **subset cell**. Note that these unique identifiers should be numbers, but they may be classified as characters. In particular, if there are repeats among the `matchingvars_id`s and the `subsetcells_id`s, you can paste "00" before the `subsetcells_id`s to ensure they are unique from the `matchingvars_id`s (as we did above).
 
-* `addpoints` A boolean indicating whether the **subset cells** should be added to the map of matching quality.
+* `addpoints` A boolean indicating whether the **subset cells** should be added to the map of matching quality as points.
 
 * `raster_template` This is one of the rasters used to define the **target cells** and it is used as a template for creating a raster of matching quality.
 
@@ -230,7 +231,7 @@ The `secondaryMatching` function matches first on a `reference_treatment` and th
 
 In our case, the `reference_treatment` is the site-specific soil type, designated by '.1' appended onto the `site_id`. The other soil types (`other_treatments`) are designated similarly. An example of the five different soil types and their respective `site_ids` are shown in the following table.
 
-#### Soil types used in simulation
+#### Example of soil types used in simulation
 
 | treatment |  site_ids  | Sand (%) | Clay (%) |
 |:---------:|:----------:|:--------:|:--------:|
@@ -264,7 +265,7 @@ subsetcells$clay <- subsetcells$clay*100
 subsetcells$site_id <- paste0("00",subsetcells$site_id)
 ```
 
-The `secondaryMatching` function requires `other_treatments` as a data frame where rownames are the numbers designating each [treatment type](#soil-types-used-in simulation) and the columns correspond to the secondary matching variables, in the same order as they appear in `matchingvars` (sand and clay in our case).
+The `secondaryMatching` function requires that `other_treatments` are provided as a data frame where rownames are the numbers designating each [treatment type](#example-of-soil-types-used-in-simulation) and the columns correspond to the secondary matching variables, in the same order as they appear in `matchingvars` ('sand' and 'clay' in our case).
 
 Again, you will need to select **matching criteria** for the second matching step. You may have some idea of what these should be and you can experiment some by trying different sets of criteria to see what works best. Note that the `choose_criteria` function does not currently work with `secondaryMatching`, so any experimentation must be done manually (e.g., loop through different sets of criteria and compare coverage). Below, we have set **matching criteria** to 10% of the range of sand and clay among the **target cells**.
 
@@ -278,9 +279,9 @@ Please also refer to the `secondaryMatching` documentation.
 
 * `subsetcells` A data frame with columns that correspond to those in `secondaryvars`, but represent only one of the treatments (`reference_treatment`). This function is designed to handle an experimental design in which there is a "reference" treatment (which can be either set for all sites or site-specific) and a series of "other" treatments that are the same across all **subset cells**.
 
-* `subsetcells_id` The name of the column that contains the unique identifiers for each **subset cell**. Note that these unique identifiers should be numbers, but they may be classified as characters. In particular, if there are repeats among the`matchingvars_id`s and the `subsetcells_id`s, you can paste "00" before the `subsetcells_id`s to ensure they are unique from the `matchingvars_id`s.
+* `subsetcells_id` The name of the column that contains the unique identifiers for each **subset cell**. Note that these unique identifiers should be numbers, but they may be classified as characters. In particular, if there are repeats among the `matchingvars_id`s and the `subsetcells_id`s, you can paste "00" before the `subsetcells_id`s to ensure they are unique from the `matchingvars_id`s.
 
-* `subset_in_target` A boolean indicating if the **subset cells** are taken from within the **target cells**. Currently there is only functionality for `FALSE` in this function. 
+* `subset_in_target` A boolean indicating if the **subset cells** are taken from within the **target cells**. Currently there is only functionality for `FALSE`. 
 
 * `criteria` A vector of **matching criteria** that correspond to the secondary **matching variables**. Matching criteria represent the maximum difference allowed for each variable between matched **target** and **subset cells**.
 
@@ -288,7 +289,7 @@ Please also refer to the `secondaryMatching` documentation.
 
 * `reference_treatment` Character, but should be composed only of numbers. Designates the reference treatment identifier that will be pasted onto the `subsetcells_id` as a decimal to generate unique identifiers for each treatment. The combination of the `subsetcells_id` and `reference_treatment` should be able to be converted to numeric. For example, if `subsetcells_id`s are of the form 10001 and the `reference_treatment` is '1', the resulting id would be 10001.1. Default value is '1'.
 
-* `other_treatments` A data frame containing the secondary variables for "other" treatments that are the same across all **subset cells** (e.g., a set of soil types that are simulated for each site in our example). The columns should correspond to the `secondarvars` and the rownames will designate the treatment identifiers that will be pasted onto the `subsetcells_id` to generate unique identifiers for each treatment. For example, see our table of [treatment types](#soil-types-used-in-simulation).
+* `other_treatments` A data frame containing the secondary variables for "other" treatments that are the same across all **subset cells** (e.g., a set of soil types that are simulated for each site in our example). The columns should correspond to the `secondarvars` and the rownames will designate the treatment identifiers that will be pasted onto the `subsetcells_id` to generate unique identifiers for each treatment. For example, see our table of [treatment types](#example-of-soil-types-used-in-simulation).
 
 **Note:** the function below does not specify several additional arguments that are left as default values. These include:
 
@@ -344,7 +345,7 @@ Now that we have completed matching, we should evaluate the success of matching.
 
 ### 1. Calculate matching quality
 
-In addition to identifying the matching **subset cell** for each **target cell**, the `multivarmatch` and `seondaryMatching` functions also calculate the weighted Euclidean distance between matched cells for the first and second set of **matching variables**, which can be interpreted as a continuous variable measuring matching quality. Distances less than or equal to one indicate high-quality matching (**matching criteria** have been met for all variables). Distances greater than one indicate that the difference between these **target cells** and their matched **subset cell** exceeds the **matching criterion** for one or more variables.  
+In addition to identifying the matching **subset cell** for each **target cell**, the `multivarmatch` and `seondaryMatching` functions also calculate the weighted Euclidean distance between matched cells for the first and second set of **matching variables**, which can be interpreted as a continuous variable measuring matching quality. Distances less than or equal to one indicate high-quality matching (**matching criteria** have been met for all variables). Distances greater than one indicate that the difference between **target cells** and their matched **subset cell** exceeds the **matching criterion** for one or more variables.  
 
 Matching quality can be used to exclude **target cells** for which there is insufficient matching, i.e., no simulated site is analogous, and to determine the spatial extent of the represented area. In *Renne et al.*, we used a cut-off of 1.5 as a threshold between high/moderate quality and low quality matching, and excluded sites with matching quality >1.5 from the final interpolated datasets. Importantly, we did not exclude sites that had low quality matching for soils variables (used in the second matching step) because at 30 arcsecond resolution, the **target cells** are likely to include a range of soil types. Thus, results from the soil type of the matched **subset cells** are likely to be relevant to the **target cells**, even if matching of the soil variables is poor.
 
@@ -364,17 +365,17 @@ Please also refer to the `evaluateMatching` documentation.
 
 * `allvars` A data frame generated using `makeInputdata` where column 1 and rownames are 'cellnumbers', columns 2 and 3 correspond to 'x' and 'y' coordinates, and additional columns correspond to various variables (which can include **matching variables**).
 
-* `matches` A data frame output from the `multivarmatch` or `secondaryMatchinig` function.
+* `matches` A data frame output from the `multivarmatch` or `secondaryMatching` function.
 
-* `secondarymatch` A boolean indicating if the `matches` data frame comes from the`secondaryMatching` function. 
+* `secondarymatch` A boolean indicating if the `matches` data frame comes from the `secondaryMatching` function. 
 
-* `quality_name` Name of the column in the `matches` data frame that contains the matching quality variable to use to evaluate matching "matching_quality" or "matching_quality_secondary". 
+* `quality_name` Name of the column in the `matches` data frame that contains the matching quality variable to use to evaluate matching. Must be either "matching_quality" or "matching_quality_secondary". 
 
 * `matchingvars_id` The name of the column that contains the unique identifiers for each **target cell**. If `matchingvars` is derived from the `makeInputData`, this will be "cellnumbers"
 
-* `subset_in_target` A boolean indicating if the **subset cells** are taken from within the **target cells**. When the `kpoints` function is used to select the **subset cells**, this will be `TRUE` (as is the case in this example). 
+* `subset_in_target` A boolean indicating if the **subset cells** are taken from within the **target cells**. (`FALSE` in this example). 
 
-* `matching_distance` The maximum allowable weighted Euclidean distance between **target **and **subset cells** such that the matched cells can be considered analogous. (Set to 1.5 as described in Renne et al.).
+* `matching_distance` The maximum allowable weighted Euclidean distance between **target **and **subset cells** such that the matched cells can be considered analogous. (Set to 1.5 in this example).
 
 * `plot_diffs` A boolean indicating whether a bar plot of the standard deviation of differences for each variable should be plotted.
 
@@ -433,9 +434,9 @@ Please also refer to the `evaluateGeoDist` documentation.
 
 * `exclude_poor_matches` A boolean indicating if **target cells** with poor matching quality (weighted Euclidean distance between **target **and matched **subset cell** is greater than `matching_distance`) should be excluded from calculations.  
 
-* `quality_name` Name of the column in the `matches` data frame that contains the matching quality variable to use to evaluate matching "matching_quality" or "matching_quality_secondary". 
+* `quality_name` Name of the column in the `matches` data frame that contains the matching quality variable to use to evaluate matching. Must be either "matching_quality" or "matching_quality_secondary". 
 
-* `matching_distance` The maximum allowable weighted Euclidean distance between **target **and **subset cells** such that the matched cells can be considered analogous. (Set to 1.5 as described in *Renne et al.*).
+* `matching_distance` The maximum allowable weighted Euclidean distance between **target **and **subset cells** such that the matched cells can be considered analogous. (Set to 1.5 in this example).
 
 * `longlat` A boolean to pass to an internal function. Indicates if the coordinates are in longitude and latitude format for calculating distances between points. Default value is `TRUE` and coordinates must be provided in this format.
 
@@ -478,20 +479,20 @@ geodist <- evaluateGeoDist(matches = quals, subsetcells = subsetcells,
 
 
 
-*Average distance between the* **subset cell** *that is matched to a given* **target cell** *and the* **subset cells** *that are matched to the eight adjacent neighbors of that* **target cell***.*
+*Average distance (km) between the* **subset cell** *that is matched to a given* **target cell** *and the* **subset cells** *that are matched to the eight adjacent neighbors of that* **target cell***.*
 
 <img src="./figures/neighbordist_twostep.png" width="50%">
 
 
 ### Explanation of `evaluateGeoDist` outputs
 
-Data frame with the distance between **target **and matched **subset cells** ('target_to_subset_distance') and the average distance between the **subset cell** matched to each **target cell** and the **subset cells** matched to the eight adjacent **target cells** ('avgdistance_to_neighbors'). The first column and the rownames correspond to the unique identifiers for the **target cells**, and columns 2 and 3 correspond to the 'x' and 'y' coordinates of the **target cells**.
+A data frame with the distance between **target **and matched **subset cells** ('target_to_subset_distance') and the average distance between the **subset cell** matched to each **target cell** and the **subset cells** matched to the eight adjacent **target cells** ('avgdistance_to_neighbors'). The first column and the rownames correspond to the unique identifiers for the **target cells**, and columns 2 and 3 correspond to the 'x' and 'y' coordinates of the **target cells**.
 
 
 
 ### 4. Leave-one-out cross-validation
 
-Once simulations are complete for the **subset cells**, interpolation errors can calculated be estimated using leave-one-out cross validation (LOOCV) with the `loocv` function. In LOOCV, each **subset cell** is matched to its nearest neighbor from among the remaining **subset cells** (using Euclidean distance of the weighted **matching variables**). Then, an estimate of the interpolation error can be calculated using the following equation:
+Once simulations are complete for the **subset cells**, interpolation errors can be estimated using leave-one-out cross validation (LOOCV) with the `loocv` function. In LOOCV, each **subset cell** is matched to its nearest neighbor from among the remaining **subset cells** (using Euclidean distance of the weighted **matching variables**). Then, an estimate of the interpolation error can be calculated using the following equation:
 
 $$CVerror=\sqrt{\frac{1}k∑_{i=1}^{k}(y_i-\hat y_i)^2}$$
 
@@ -513,23 +514,23 @@ rownames(output_results) <- output_results$site_ids
 
 ### Explanation of `loocv` arguments
 
-Please also refer to the `interpolatePoints` documentation.
+Please also refer to the `loocv` documentation.
 
-* `matchingvars` A data frame that includes all **matching variables** for the **subset cells**. Rownames should correspond to the unique identifiers for each **subset cell**. The first two columns correspond to 'x' and 'y' coordinates of the **subset cells** (if none exist, use "NA"). The rest of the columns correspond to the **matching variables**.
+* `matchingvars` A data frame that includes all **matching variables** for the **subset cells**. Rownames should correspond to the unique identifiers for each **subset cell**. The first two columns correspond to 'x' and 'y' coordinates of the **subset cells**. The rest of the columns correspond to the **matching variables**.
 
-* `output_results` A data frame of simulation output results for all simulated sites (**subset cells**). The first column and the rownames should correspond to the unique identifiers for the **subset cells**, and must match the rownames in 'matchingvars' exactly.
+* `output_results` A data frame of simulation output results for all simulated sites (**subset cells**). The first column and the rownames should correspond to the unique identifiers for the **subset cells**, and must match the rownames in `matchingvars` exactly.
 
-* `criteria1` A vector of **matching criteria** that correspond to the **matching variables**. Matching criteria represent the maximum difference allowed for each variable between matched **target **and **subset cells**, and should be the same criteria used in `multivarMatch` and other functions above.
+* `criteria1` A vector of **matching criteria** that correspond to the **matching variables**. Matching criteria represent the maximum difference allowed for each variable between matched **target **and **subset cells**, and should be the same criteria used in `multivarMatch`.
 
 * `criteria2` A vector of **matching criteria** that correspond to the secondary **matching variables**. Matching criteria represent the maximum difference allowed for each variable between matched **target **and **subset cells**, and should be the same criteria used in `secondaryMatching`.
 
-* `secondarymatch` A boolean indicating if a secondary matching step should be completed. We only used one step of matching in this example, so it is set to `FALSE`.
+* `secondarymatch` A boolean indicating if a secondary matching step should be completed. `TRUE` in this example.
 
 * `secondaryvars_id` Column name for the unique identifiers in the `secondaryvars` data frame (should be the first column). 
 
 * `reference_treatment` Character, but should be composed only of numbers. Designates the reference treatment identifier that will be pasted onto the `subsetcells_id` as a decimal to generate unique identifiers for each treatment. The combination of the `subsetcells_id` and `reference_treatment` should be able to be converted to numeric. For example, if `subsetcells_id`s are of the form 10001 and the `reference_treatment` is '1', the resulting id would be 10001.1. Default value is '1'.
 
-* `other_treatments` A data frame containing the secondary variables for "other" treatments that are the same across all **subset cells** (e.g., a set of soil types that are simulated for each site in our example). The columns should correspond to the `secondarvars` and the rownames will designate the treatment identifiers that will be pasted onto the `subsetcells_id` to generate unique identifiers for each treatment. For example, see our table of [treatment types](#soil-types-used-in simulation).
+* `other_treatments` A data frame containing the secondary variables for "other" treatments that are the same across all **subset cells** (e.g., a set of soil types that are simulated for each site in our example). The columns should correspond to the `secondarvars` and the rownames will designate the treatment identifiers that will be pasted onto the `subsetcells_id` to generate unique identifiers for each treatment. For example, see our table of [treatment types](#example-of-soil-types-used-in-simulation)
 
 * `n_neighbors` The number of nearest neighbors to search for among the **subset cells**. To achieve leave-one-out cross-validation, this number must be set to 2. The nearest neighbor of each **subset cells** is itself, so the second nearest neighbor will correspond the closest non-self neighbor.
 
@@ -636,17 +637,17 @@ For our example here, we will again use our set of output results from Bradford 
 
 Please also refer to the `interpolatePoints` documentation.
 
-* `matches` A data frame output from the `multivarmatch` function.
+* `matches` A data frame output from the `multivarmatch` or `secondaryMatching` functions.
 
 * `output_results` A data frame containing simulation output results for all simulated sites (**subset cells**). The first column and the rownames should correspond to the unique identifiers for the **subset cells**. Importantly, these identifiers need to match the identifiers in the 'subset_cell' column of the `matches` data frame. 
 
 * `exclude_poor_matches` A boolean indicating if **target cells** with poor matching quality (weighted Euclidean distance between **target **and matched **subset cell** is greater than `matching_distance`) should be excluded from calculations.  
 
-* `subset_cell_names` The name of the column in the 'matches' data frame that contains the unique identifiers for the **subset cells** matched to each **target cell**.
+* `subset_cell_names` The name of the column in the `matches` data frame that contains the unique identifiers for the **subset cells** matched to each **target cell**.
 
-* `quality_name` The name of the column in the 'matches' data frame that contains the matching quality for the **subset cells** matched to each **target cell**.
+* `quality_name` The name of the column in the `matches` data frame that contains the matching quality for the **subset cells** matched to each **target cell**. Must be either "matching_quality" or "matching_quality_secondary". (Designated as "matching_quality" in this example).
 
-* `matching_distance` The maximum allowable weighted Euclidean distance between **target **and **subset cells** such that the matched cells can be considered analogous. (Set to 1.5 as described in Renne et al.).
+* `matching_distance` The maximum allowable weighted Euclidean distance between **target **and **subset cells** such that the matched cells can be considered analogous. (Set to 1.5 in this example).
 
 * `raster_template` This is one of the rasters used to define the **target cells** and it is used as a template for creating interpolated output variables.
 

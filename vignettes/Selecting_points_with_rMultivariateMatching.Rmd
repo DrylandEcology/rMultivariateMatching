@@ -43,9 +43,9 @@ The functions in the `rMultivariateMatching` package measure similarity between 
 
 * **subset cells** A subset of sites (selected using `kpoints` or determined from some other method) for simulation. Sites are defined geographically as the centroid of the raster cell that they represent.
 * **target cells** All cells across a study area. 
-* **matching variables** A set of variables that are relevant to the ecosystem and simulation model and are used to determine similarity between sites. Matching variables must be available as rasters covering the entire study area.
+* **matching variables** A set of variables that are relevant to the ecosystem and simulation model and are used to determine similarity between sites. **Matching variables** must be available as rasters covering the entire study area.
 * **matching criteria** Maximum allowable differences between **target** and matched **subset cells** for each **matching variable** such that sites can be considered analogous.
-* **kpoints** Site selection algorithm that uses multivariate clustering based on the unsupervised classification scheme, *k-means* (MacQueen 1967), to find groups of analogous sites across a study area. 
+* **kpoints** Site selection algorithm that uses multivariate clustering based on the unsupervised classification scheme, *kmeans* (MacQueen 1967), to find groups of analogous sites across a study area. 
 
 The figure (Fig. 1 from *Renne et al.*) below illustrates an overview of the site selection and interpolation methods and key terminology. First, a set of **matching variables** are selected and standardized using user-defined **matching criteria**. Next, the `kpoints` algorithm is used to determine an optimal set of *k* **subset cells** for use in field sampling or simulation. All **target cells** are matched to one of the **subset cells** (matches are denoted by color in the central panel). Finally, point results (e.g., simulation output) for the **subset cells** are interpolated across the study area using multivariate matching to produce continuous, high-resolution maps of output, such as plant functional type biomass or ecohydrological variables. 
 
@@ -114,7 +114,7 @@ stddev <- apply(matchingvars[,4:ncol(matchingvars)],2,sd)
 criteria_list <- list(range2.5pct, range5pct, range10pct, stddev)
 ```
 
-#### Table displaying `criteria list`
+#### Table displaying `criteria_list`
 | bioclim_01 | bioclim_04 | bioclim_09 | bioclim_12 | bioclim_15 | bioclim_18 |
 |:----------:|:----------:|:----------:|:----------:|:----------:|:----------:|
 |   0.36     |  10.62     |    0.82    |    32.97   |     1.36   |    4.61    |
@@ -159,7 +159,7 @@ results2 <- choose_criteria(matchingvars, criteria_list = criteria_list,
 
 ### Explanation of `choose_criteria` outputs
 
-The output from the `choose_criteria` function is a named list where the first item ('totalarea') reports the total area in $km^2$ of the **target cells** and the second item ('solution_areas') reports the area represented (Euclidean distance of weighted **matching variables** $\le 1$ between **target** and matched **subset cells**) for each set of **matching criteria**.
+The output from the `choose_criteria` function is a named list where the first item ('totalarea') reports the total area in $km^2$ of the **target cells** and the second item ('solution_areas') reports the area represented (Euclidean distance of weighted **matching variables** is $\le 1$ between **target** and matched **subset cells**) for each set of **matching criteria**.
 
 In the above example, `plot_coverage` is set to `FALSE`. If `TRUE`, the `choose_criteia` function will generate a barplot that shows the proportion of the study area that is represented by each set of matching criteria in `criteria_list`. You can also set `plot_coverage` to `FALSE` and use the `criteriaplot` function to visualize the results of the `choose_criteria` function, as shown below.
 
@@ -280,6 +280,8 @@ results1 <- kpoints(matchingvars, criteria = criteria, klist = 200,
 ## Finding final selection of subset cells using `kpoints`
 
 Once you have determined the **matching variables**, **matching criteria**, and an optimal and feasible number of points (*k*), you should run the `kpoints` function again. This time, you should set `n_starts` to a relatively large number to have a better chance of finding a solution that will represent as large a proportion of the study area as possible (see the [Overview of the kpoints function](#overview-of-the-kpoints-function) section above for details). Setting `n_starts` to 100 should be adequate, and you may choose a higher number if you wish.
+
+**Note:** this function may take quite a while to run. Running `kpoints` with `n_starts` = 100 for this example could take 2-3 hours.
 
 
 ```{r}
